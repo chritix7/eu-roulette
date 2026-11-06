@@ -2,57 +2,95 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Roulette Casino</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AURUM ROULETTE — European Roulette</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="casino">
-    <header>
-      <h1>roulette royale</h1>
-      <p class="subtitle">Jeu de démonstration — jetons virtuels uniquement</p>
-    </header>
+  <div class="ambient"></div>
 
-    <section class="table">
-      <div class="wheel-zone">
-        <div class="wheel-frame">
-          <div id="wheel" class="wheel"></div>
-          <div class="pointer"></div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div>
+        <h1>AURUM ROULETTE</h1>
+        <p>European Roulette · Private Table</p>
+      </div>
+    </div>
+
+    <div class="wallet">
+      <span>Balance</span>
+      <strong><span id="balance">1,000</span> <small>CHIPS</small></strong>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="wheel-panel">
+      <div class="wheel-stage">
+        <div class="wheel-outer">
+          <div class="wheel-ring"></div>
+
+          <div class="wheel-track">
+            <div id="wheel" class="wheel"></div>
+            <div id="ball" class="ball"></div>
+          </div>
+
+          <div class="hub">
+            <div class="hub-core"></div>
+          </div>
         </div>
-        <div id="result" class="result">Placez votre mise</div>
+
+        <div class="pointer"></div>
       </div>
 
-      <div class="controls">
-        <div class="balance">
-          Solde : <span id="balance">1000</span> jetons
+      <div id="result" class="result">
+        Placez votre mise pour lancer la partie
+      </div>
+
+      <div class="history">
+        <span class="history-title">Derniers numéros</span>
+        <div id="history-list" class="history-list"></div>
+      </div>
+    </section>
+
+    <section class="bet-panel">
+      <h2>Table de mise</h2>
+
+      <div class="field">
+        <label for="bet-amount">Montant de la mise</label>
+        <div class="amount-row">
+          <button type="button" data-step="-10">-10</button>
+          <input id="bet-amount" type="number" min="1" step="1" value="25" />
+          <button type="button" data-step="10">+10</button>
         </div>
+      </div>
 
-        <label for="bet-amount">Mise</label>
-        <input id="bet-amount" type="number" min="1" value="10" />
+      <div class="outside-bets">
+        <button class="bet red" data-bet="red">Rouge</button>
+        <button class="bet black" data-bet="black">Noir</button>
+        <button class="bet green" data-bet="green">Zéro</button>
+        <button class="bet" data-bet="even">Pair</button>
+        <button class="bet" data-bet="odd">Impair</button>
+        <button class="bet" data-bet="low">1 – 18</button>
+        <button class="bet" data-bet="high">19 – 36</button>
+      </div>
 
-        <div class="bet-buttons">
-          <button class="bet red" data-bet="red">Rouge</button>
-          <button class="bet black" data-bet="black">Noir</button>
-          <button class="bet green" data-bet="green">0</button>
-          <button class="bet" data-bet="even">Pair</button>
-          <button class="bet" data-bet="odd">Impair</button>
-          <button class="bet" data-bet="low">1-18</button>
-          <button class="bet" data-bet="high">19-36</button>
-        </div>
-
-        <label for="number-bet">Ou misez sur un numéro</label>
+      <div class="field">
+        <label for="number-bet">Mise sur un numéro</label>
         <select id="number-bet">
-          <option value="">Aucun</option>
+          <option value="">Aucun numéro sélectionné</option>
         </select>
-
-        <button id="spin" class="spin">Lancer la roulette</button>
-        <button id="reset" class="reset">Réinitialiser</button>
-
-        <div class="history">
-          <h2>Derniers numéros</h2>
-          <div id="history-list"></div>
-        </div>
       </div>
+
+      <button id="spin" class="primary">Lancer la roulette</button>
+      <button id="reset" class="ghost">Réinitialiser la table</button>
+
+      <p class="disclaimer">
+        Jeu de démonstration. Jetons virtuels uniquement — aucun argent réel.
+      </p>
     </section>
   </main>
 
