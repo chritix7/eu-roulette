@@ -136,9 +136,30 @@ function buildWheel() {
       <feGaussianBlur stdDeviation="18"/>
     </filter>
 
-    <filter id="rimShadow" x="-30%" y="-30%" width="160%" height="160%">
+        <filter id="rimShadow" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="14" stdDeviation="16"
         flood-color="#000" flood-opacity=".75"/>
+    </filter>
+
+    <radialGradient id="pearl" cx=".32" cy=".26" r=".85">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".35" stop-color="#f7f2e6"/>
+      <stop offset=".72" stop-color="#c9c4ba"/>
+      <stop offset="1" stop-color="#6d6a64"/>
+    </radialGradient>
+
+        <filter id="ballGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feDropShadow
+        dx="0"
+        dy="3"
+        stdDeviation="2.5"
+        flood-color="#000000"
+        flood-opacity=".8"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation=".25" result="soft"/>
+      <feMerge>
+        <feMergeNode in="soft"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   `;
 
@@ -321,19 +342,21 @@ function buildWheel() {
 
   brand.textContent = "CHRYSION";
 
-  svgNode("ellipse", {
+    svgNode("ellipse", {
     id: "ball-shadow",
-    rx: 7,
-    ry: 4,
-    fill: "#000a"
+    rx: 9,
+    ry: 5,
+    fill: "#000000",
+    opacity: .55
   }, root);
 
   svgNode("circle", {
     id: "ball",
-    r: 6.5,
+    r: 8.5,
     fill: "url(#pearl)",
-    stroke: "#fff9",
-    "stroke-width": .5
+    stroke: "#ffffff",
+    "stroke-width": 1.2,
+    filter: "url(#ballGlow)"
   }, root);
 
   positionBall(0, 258);
