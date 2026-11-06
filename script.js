@@ -8,11 +8,11 @@ const wheel = document.getElementById("wheel");
 const ball = document.getElementById("ball");
 const resultEl = document.getElementById("result");
 const balanceEl = document.getElementById("balance");
-const betAmount = document.getElementById("bet-amount");
-const numberBet = document.getElementById("number-bet");
 const spinButton = document.getElementById("spin");
 const resetButton = document.getElementById("reset");
 const historyList = document.getElementById("history-list");
+const activeBetEl = document.getElementById("active-bet");
+const numbersGrid = document.getElementById("numbers-grid");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CENTER = 250;
@@ -21,7 +21,8 @@ const NUMBER_RADIUS = 205;
 const INNER_RADIUS = 155;
 
 let balance = 1000;
-let currentBet = null;
+let selectedChip = 10;
+let bets = [];
 let wheelRotation = 0;
 let ballRotation = 0;
 let spinning = false;
@@ -54,29 +55,28 @@ function buildWheel() {
   wheel.innerHTML = "";
   const sectorAngle = 360 / numbers.length;
 
-  const outerCircle = createSvgElement("circle", {
+  wheel.appendChild(createSvgElement("circle", {
     cx: CENTER,
     cy: CENTER,
     r: OUTER_RADIUS,
     fill: "#1b1508"
-  });
-  wheel.appendChild(outerCircle);
+  }));
 
   numbers.forEach((number, index) => {
-    const startAngle = index * sectorAngle;
-    const endAngle = startAngle + sectorAngle;
+    const start = index * sectorAngle;
+    const end = start + sectorAngle;
 
-    const startOuter = polar(startAngle, OUTER_RADIUS);
-    const endOuter = polar(endAngle, OUTER_RADIUS);
-    const endInner = polar(endAngle, INNER_RADIUS);
-    const startInner = polar(startAngle, INNER_RADIUS);
+    const so = polar(start, OUTER_RADIUS);
+    const eo = polar(end, OUTER_RADIUS);
+    const ei = polar(end, INNER_RADIUS);
+    const si = polar(start, INNER_RADIUS);
 
-    const path = createSvgElement("path", {
+    wheel.appendChild(createSvgElement("path", {
       d: [
-        `M ${startOuter.x} ${startOuter.y}`,
-        `A ${OUTER_RADIUS} ${OUTER_RADIUS} 0 0 1 ${endOuter.x} ${endOuter.y}`,
-        `L ${endInner.x} ${endInner.y}`,
-        `A ${INNER_RADIUS} ${INNER_RADIUS} 0 0 0 ${startInner.x} ${startInner.y}`,
+        `M ${so.x} ${so.y}`,
+        `A ${OUTER_RADIUS} ${OUTER_RADIUS} 0 0 1 ${eo.x} ${eo.y}`,
+        `L ${ei.x} ${ei.y}`,
+        `A ${INNER_RADIUS} ${INNER_RADIUS} 0 0 0 ${si.x} ${si.y}`,
         "Z"
       ].join(" "),
       fill: colorOf(number) === "red" ? "#b3202c"
@@ -84,22 +84,20 @@ function buildWheel() {
         : "#101013",
       stroke: "rgba(212,175,55,.75)",
       "stroke-width": "1.2"
-    });
+    }));
 
-    wheel.appendChild(path);
-
-    const labelAngle = startAngle + sectorAngle / 2;
-    const labelPosition = polar(labelAngle, NUMBER_RADIUS);
+    const labelAngle = start + sectorAngle / 2;
+    const pos = polar(labelAngle, NUMBER_RADIUS);
 
     const text = createSvgElement("text", {
-      x: labelPosition.x,
-      y: labelPosition.y,
+      x: pos.x,
+      y: pos.y,
       fill: "#fff",
       "font-size": "17",
       "font-weight": "800",
       "text-anchor": "middle",
       "dominant-baseline": "middle",
-      transform: `rotate(${labelAngle} ${labelPosition.x} ${labelPosition.y})`,
+      transform: `rotate(${labelAngle} ${pos.x} ${pos.y})`,
       style: "font-family: Inter, sans-serif; paint-order: stroke; stroke: rgba(0,0,0,.55); stroke-width: 3px;"
     });
 
@@ -107,37 +105,113 @@ function buildWheel() {
     wheel.appendChild(text);
   });
 
-  const innerRing = createSvgElement("circle", {
+  wheel.appendChild(createSvgElement("circle", {
     cx: CENTER,
     cy: CENTER,
     r: INNER_RADIUS,
     fill: "none",
     stroke: "rgba(212,175,55,.85)",
     "stroke-width": "5"
-  });
-  wheel.appendChild(innerRing);
+  }));
 }
 
-function buildNumberSelect() {
-  numbers.forEach(number => {
-    const option = document.createElement("option");
-    option.value = number;
-    option.textContent = number;
-    numberBet.appendChild(option);
+function buildBettingBoard() {
+  numbersGrid.innerHTML = "";
+
+  for (let row = 0; row < 12; row++) {
+    for (let column = 0; column < 3; column++) {
+      const number = row * 3 + (3 - column);
+      const cell = document.createElement("button");
+
+      cell.className = `table-cell ${colorOf(number)}`;
+      cell.dataset.bet = "number";
+      cell.dataset.number = number;
+      cell.textContent = number;
+
+      numbersGrid.appendChild(cell);
+    }
+  }
+}
+
+function betLabel(bet) {
+  if (bet.type === "number") return `Numéro ${bet.value}`;
+  if (bet.type === "red") return "Rouge";
+  if (bet.type === "black") return "Noir";
+  if (bet.type === "even") return "Pair";
+  if (bet.type === "odd") return "Impair";
+  if (bet.type === "low") return "1 – 18";
+  if (bet.type === "high") return "19 – 36";
+  if (bet.type === "dozen") return `${bet.value}${bet.value === 1 ? "re" : "e"} douzaine`;
+  if (bet.type === "column") return `Colonne ${bet.value}`;
+  return "Mise";
+}
+
+function updateActiveBet() {
+  if (bets.length === 0) {
+    activeBetEl.textContent = "Aucune mise placée";
+    return;
+  }
+
+  const total = bets.reduce((sum, bet) => sum + bet.amount, 0);
+  activeBetEl.textContent = `${bets.length} mise${bets.length > 1 ? "s" : ""} · Total : ${format(total)} jetons`;
+}
+
+function clearSelection() {
+  document.querySelectorAll(".table-cell").forEach(cell => {
+    cell.classList.remove("selected");
+    const stake = cell.querySelector(".stake");
+    if (stake) stake.remove();
   });
 }
 
-function setActiveBet(bet) {
-  currentBet = bet;
+function placeBet(cell) {
+  const type = cell.dataset.bet;
+  const value = cell.dataset.number || cell.dataset.dozen || cell.dataset.column || null;
 
-  document.querySelectorAll(".bet").forEach(button => {
-    button.classList.toggle("active", button.dataset.bet === bet);
-  });
+  const existing = bets.find(bet =>
+    bet.type === type && String(bet.value) === String(value)
+  );
+
+  if (existing) {
+    existing.amount += selectedChip;
+  } else {
+    bets.push({ type, value, amount: selectedChip });
+  }
+
+  clearSelection();
+  cell.classList.add("selected");
+
+  const stake = document.createElement("span");
+  stake.className = "stake";
+  stake.textContent = bets.find(bet =>
+    bet.type === type && String(bet.value) === String(value)
+  ).amount;
+
+  cell.appendChild(stake);
+  updateActiveBet();
 }
 
-function payout(bet, number, amount) {
-  if (bet === "number") {
-    return Number(numberBet.value) === number ? amount * 36 : 0;
+function totalBet() {
+  return bets.reduce((sum, bet) => sum + bet.amount, 0);
+}
+
+function payoutForBet(bet, number) {
+  const amount = bet.amount;
+
+  if (bet.type === "number") {
+    return Number(bet.value) === number ? amount * 36 : 0;
+  }
+
+  if (bet.type === "column") {
+    const column = Number(bet.value);
+    const matches = number !== 0 && number % 3 === column % 3;
+    return matches ? amount * 3 : 0;
+  }
+
+  if (bet.type === "dozen") {
+    const dozen = Number(bet.value);
+    const matches = number >= (dozen - 1) * 12 + 1 && number <= dozen * 12;
+    return matches ? amount * 3 : 0;
   }
 
   if (number === 0) return 0;
@@ -151,7 +225,7 @@ function payout(bet, number, amount) {
     high: number >= 19
   };
 
-  return rules[bet] ? amount * 2 : 0;
+  return rules[bet.type] ? amount * 2 : 0;
 }
 
 function addHistory(number) {
@@ -168,41 +242,35 @@ function addHistory(number) {
   });
 }
 
-document.querySelectorAll(".bet").forEach(button => {
+document.querySelectorAll(".chip-btn").forEach(button => {
   button.addEventListener("click", () => {
-    setActiveBet(button.dataset.bet);
-    numberBet.value = "";
+    selectedChip = Number(button.dataset.chip);
+
+    document.querySelectorAll(".chip-btn").forEach(item => {
+      item.classList.toggle("active", item === button);
+    });
   });
 });
 
-numberBet.addEventListener("change", () => {
-  if (numberBet.value !== "") setActiveBet("number");
-});
-
-document.querySelectorAll("[data-step]").forEach(button => {
-  button.addEventListener("click", () => {
-    const next = Math.max(1, Number(betAmount.value) + Number(button.dataset.step));
-    betAmount.value = next;
+document.querySelectorAll(".table-cell").forEach(cell => {
+  cell.addEventListener("click", () => {
+    if (spinning) return;
+    placeBet(cell);
   });
 });
 
 spinButton.addEventListener("click", () => {
   if (spinning) return;
 
-  const amount = Math.floor(Number(betAmount.value));
+  const amount = totalBet();
 
-  if (!currentBet) {
-    resultEl.textContent = "Choisissez d’abord une mise.";
-    return;
-  }
-
-  if (!Number.isFinite(amount) || amount < 1) {
-    resultEl.textContent = "Entrez une mise valide.";
+  if (bets.length === 0) {
+    resultEl.textContent = "Placez au moins un jeton sur le tapis.";
     return;
   }
 
   if (amount > balance) {
-    resultEl.textContent = "Solde insuffisant.";
+    resultEl.textContent = "Solde insuffisant pour cette mise.";
     return;
   }
 
@@ -215,15 +283,25 @@ spinButton.addEventListener("click", () => {
   const winningNumber = Math.floor(Math.random() * 37);
   const sectorAngle = 360 / 37;
 
-  wheelRotation += 1800 + Math.random() * 540;
+  const currentMod = ((wheelRotation % 360) + 360) % 360;
+  const targetMod = ((360 - winningNumber * sectorAngle) % 360 + 360) % 360;
+  let delta = targetMod - currentMod;
+
+  if (delta < 0) delta += 360;
+
+  wheelRotation += 1800 + delta;
   ballRotation -= 2600 + Math.random() * 900;
 
   wheel.style.transform = `rotate(${wheelRotation}deg)`;
   ball.style.transform = `translateX(-50%) rotate(${ballRotation}deg)`;
 
   setTimeout(() => {
-    const gain = payout(currentBet, winningNumber, amount);
-    balance += gain;
+    const totalGain = bets.reduce(
+      (sum, bet) => sum + payoutForBet(bet, winningNumber),
+      0
+    );
+
+    balance += totalGain;
     balanceEl.textContent = format(balance);
 
     const colorName = {
@@ -235,11 +313,15 @@ spinButton.addEventListener("click", () => {
     resultEl.textContent = `Résultat : ${winningNumber} · ${colorName}`;
     addHistory(winningNumber);
 
-    if (gain > 0) {
-      resultEl.textContent += ` — Gain : ${format(gain)} jetons`;
+    if (totalGain > 0) {
+      resultEl.textContent += ` — Gain total : ${format(totalGain)} jetons`;
     } else {
       resultEl.textContent += " — Aucun gain";
     }
+
+    bets = [];
+    clearSelection();
+    updateActiveBet();
 
     spinning = false;
     spinButton.disabled = false;
@@ -253,14 +335,15 @@ spinButton.addEventListener("click", () => {
 
 resetButton.addEventListener("click", () => {
   balance = 1000;
+  bets = [];
   history.length = 0;
   historyList.innerHTML = "";
   balanceEl.textContent = format(balance);
-  resultEl.textContent = "Nouvelle partie — placez votre mise";
+  resultEl.textContent = "Nouvelle partie — placez vos jetons";
   spinButton.disabled = false;
-  setActiveBet(null);
-  numberBet.value = "";
+  clearSelection();
+  updateActiveBet();
 });
 
 buildWheel();
-buildNumberSelect();
+buildBettingBoard();

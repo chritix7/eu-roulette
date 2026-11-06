@@ -33,15 +33,13 @@
         <div class="wheel-frame">
           <svg id="wheel" viewBox="0 0 500 500"></svg>
           <div id="ball" class="ball"></div>
-          <div class="hub">
-            <span>AURUM</span>
-          </div>
+          <div class="hub"><span>AURUM</span></div>
         </div>
         <div class="pointer"></div>
       </div>
 
       <div id="result" class="result">
-        Placez votre mise pour lancer la roulette
+        Placez vos jetons sur le tapis pour lancer la roulette
       </div>
 
       <div class="history">
@@ -51,32 +49,45 @@
     </section>
 
     <section class="bet-panel">
-      <h2>Table de mise</h2>
-
-      <div class="field">
-        <label for="bet-amount">Montant de la mise</label>
-        <div class="amount-row">
-          <button type="button" data-step="-25">-25</button>
-          <input id="bet-amount" type="number" min="1" step="1" value="50" />
-          <button type="button" data-step="25">+25</button>
+      <div class="panel-head">
+        <h2>Table de mise</h2>
+        <div class="chip-selector">
+          <button class="chip-btn active" data-chip="10">10</button>
+          <button class="chip-btn" data-chip="25">25</button>
+          <button class="chip-btn" data-chip="50">50</button>
+          <button class="chip-btn" data-chip="100">100</button>
         </div>
       </div>
 
-      <div class="outside-bets">
-        <button class="bet red" data-bet="red">Rouge</button>
-        <button class="bet black" data-bet="black">Noir</button>
-        <button class="bet green" data-bet="green">Zéro</button>
-        <button class="bet" data-bet="even">Pair</button>
-        <button class="bet" data-bet="odd">Impair</button>
-        <button class="bet" data-bet="low">1 – 18</button>
-        <button class="bet" data-bet="high">19 – 36</button>
+      <div class="roulette-table">
+        <button class="table-cell zero" data-bet="number" data-number="0">0</button>
+
+        <div class="numbers-grid" id="numbers-grid"></div>
+
+        <div class="column-bets">
+          <button class="table-cell wide" data-bet="column" data-column="3">2:1</button>
+          <button class="table-cell wide" data-bet="column" data-column="2">2:1</button>
+          <button class="table-cell wide" data-bet="column" data-column="1">2:1</button>
+        </div>
+
+        <div class="dozen-bets">
+          <button class="table-cell wide" data-bet="dozen" data-dozen="1">1st 12</button>
+          <button class="table-cell wide" data-bet="dozen" data-dozen="2">2nd 12</button>
+          <button class="table-cell wide" data-bet="dozen" data-dozen="3">3rd 12</button>
+        </div>
+
+        <div class="outside-bets">
+          <button class="table-cell" data-bet="low">1–18</button>
+          <button class="table-cell" data-bet="even">Pair</button>
+          <button class="table-cell red" data-bet="red">Rouge</button>
+          <button class="table-cell black" data-bet="black">Noir</button>
+          <button class="table-cell" data-bet="odd">Impair</button>
+          <button class="table-cell" data-bet="high">19–36</button>
+        </div>
       </div>
 
-      <div class="field">
-        <label for="number-bet">Mise sur un numéro</label>
-        <select id="number-bet">
-          <option value="">Aucun numéro sélectionné</option>
-        </select>
+      <div class="active-bet" id="active-bet">
+        Aucune mise placée
       </div>
 
       <button id="spin" class="primary">Lancer la roulette</button>
