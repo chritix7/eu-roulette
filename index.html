@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="ambient"></div>
+  <div class="glow"></div>
 
   <header class="topbar">
     <div class="brand">
@@ -30,24 +30,18 @@
   <main class="layout">
     <section class="wheel-panel">
       <div class="wheel-stage">
-        <div class="wheel-outer">
-          <div class="wheel-ring"></div>
-
-          <div class="wheel-track">
-            <div id="wheel" class="wheel"></div>
-            <div id="ball" class="ball"></div>
-          </div>
-
+        <div class="wheel-frame">
+          <svg id="wheel" viewBox="0 0 500 500"></svg>
+          <div id="ball" class="ball"></div>
           <div class="hub">
-            <div class="hub-core"></div>
+            <span>AURUM</span>
           </div>
         </div>
-
         <div class="pointer"></div>
       </div>
 
       <div id="result" class="result">
-        Placez votre mise pour lancer la partie
+        Placez votre mise pour lancer la roulette
       </div>
 
       <div class="history">
@@ -62,9 +56,9 @@
       <div class="field">
         <label for="bet-amount">Montant de la mise</label>
         <div class="amount-row">
-          <button type="button" data-step="-10">-10</button>
-          <input id="bet-amount" type="number" min="1" step="1" value="25" />
-          <button type="button" data-step="10">+10</button>
+          <button type="button" data-step="-25">-25</button>
+          <input id="bet-amount" type="number" min="1" step="1" value="50" />
+          <button type="button" data-step="25">+25</button>
         </div>
       </div>
 
@@ -89,7 +83,7 @@
       <button id="reset" class="ghost">Réinitialiser la table</button>
 
       <p class="disclaimer">
-        Jeu de démonstration. Jetons virtuels uniquement — aucun argent réel.
+        Jeu de démonstration · Jetons virtuels uniquement · Aucun argent réel
       </p>
     </section>
   </main>
