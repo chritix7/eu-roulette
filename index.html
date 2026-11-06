@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roulette Casino</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="casino">
+    <header>
+      <h1>roulette royale</h1>
+      <p class="subtitle">Jeu de démonstration — jetons virtuels uniquement</p>
+    </header>
+
+    <section class="table">
+      <div class="wheel-zone">
+        <div class="wheel-frame">
+          <div id="wheel" class="wheel"></div>
+          <div class="pointer"></div>
+        </div>
+        <div id="result" class="result">Placez votre mise</div>
+      </div>
+
+      <div class="controls">
+        <div class="balance">
+          Solde : <span id="balance">1000</span> jetons
+        </div>
+
+        <label for="bet-amount">Mise</label>
+        <input id="bet-amount" type="number" min="1" value="10" />
+
+        <div class="bet-buttons">
+          <button class="bet red" data-bet="red">Rouge</button>
+          <button class="bet black" data-bet="black">Noir</button>
+          <button class="bet green" data-bet="green">0</button>
+          <button class="bet" data-bet="even">Pair</button>
+          <button class="bet" data-bet="odd">Impair</button>
+          <button class="bet" data-bet="low">1-18</button>
+          <button class="bet" data-bet="high">19-36</button>
+        </div>
+
+        <label for="number-bet">Ou misez sur un numéro</label>
+        <select id="number-bet">
+          <option value="">Aucun</option>
+        </select>
+
+        <button id="spin" class="spin">Lancer la roulette</button>
+        <button id="reset" class="reset">Réinitialiser</button>
+
+        <div class="history">
+          <h2>Derniers numéros</h2>
+          <div id="history-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
