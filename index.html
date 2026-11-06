@@ -1,106 +1,99 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CHRYSION ROYALE — European Roulette</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101113">
+  <title>CHRYSION — European Roulette</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
 <body>
-  <div class="glow"></div>
-
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-mark">C</div>
-      <div>
-        <h1>CHRYSION ROYALE</h1>
-        <p>European Roulette · Private Table</p>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="monogram" aria-hidden="true">C</div>
+        <div>
+          <h1>CHRYSION <span>ROYALE</span></h1>
+          <p>EUROPEAN ROULETTE</p>
+        </div>
       </div>
-    </div>
 
-    <div class="wallet">
-      <span>Balance</span>
-      <strong><span id="balance">1,000</span> <small>CHIPS</small></strong>
-    </div>
-  </header>
+      <div class="wallet">
+        <span class="eyebrow">AVAILABLE</span>
+        <strong id="balance">1,000</strong>
+        <span class="unit">VIRTUAL CHIPS</span>
+      </div>
+    </header>
 
-  <main class="layout">
-    <section class="wheel-panel">
-      <div class="wheel-stage">
-        <div class="wheel-3d">
-          <div class="wheel-bowl"></div>
-          <svg id="wheel" viewBox="0 0 500 500"></svg>
-          <div class="wheel-deflectors" id="deflectors"></div>
-          <div class="ball-orbit" id="ball-orbit">
-            <div class="ball"></div>
+    <main class="layout">
+      <section class="panel wheel-panel" aria-label="Roulette wheel">
+        <div class="section-heading">
+          <span class="eyebrow">PRIVATE TABLE</span>
+          <span id="status" class="status">BETS OPEN</span>
+        </div>
+
+        <div class="wheel-space">
+          <svg id="wheel" viewBox="0 0 600 600"
+               role="img" aria-label="European roulette wheel"></svg>
+        </div>
+
+        <div class="result-box">
+          <span id="result-number" class="result-number">—</span>
+          <div>
+            <span class="eyebrow">TABLE RESULT</span>
+            <p id="result" role="status" aria-live="polite">
+              Place your bets
+            </p>
           </div>
-          <div class="hub"><span>CHRYSION</span></div>
-        </div>
-        <div class="pointer"></div>
-      </div>
-
-      <div id="result" class="result">
-        Placez vos jetons sur le tapis puis lancez la roulette
-      </div>
-
-      <div class="history">
-        <span class="history-title">Derniers numéros</span>
-        <div id="history-list" class="history-list"></div>
-      </div>
-    </section>
-
-    <section class="bet-panel">
-      <div class="panel-head">
-        <h2>Table de mise</h2>
-        <div class="chip-selector">
-          <button class="chip-btn active" data-chip="10">10</button>
-          <button class="chip-btn" data-chip="25">25</button>
-          <button class="chip-btn" data-chip="50">50</button>
-          <button class="chip-btn" data-chip="100">100</button>
-        </div>
-      </div>
-
-      <div class="roulette-table">
-        <button class="table-cell zero" data-bet="number" data-number="0">0</button>
-        <div class="numbers-grid" id="numbers-grid"></div>
-
-        <div class="column-bets">
-          <button class="table-cell wide" data-bet="column" data-column="3">2:1</button>
-          <button class="table-cell wide" data-bet="column" data-column="2">2:1</button>
-          <button class="table-cell wide" data-bet="column" data-column="1">2:1</button>
         </div>
 
-        <div class="dozen-bets">
-          <button class="table-cell wide" data-bet="dozen" data-dozen="1">1st 12</button>
-          <button class="table-cell wide" data-bet="dozen" data-dozen="2">2nd 12</button>
-          <button class="table-cell wide" data-bet="dozen" data-dozen="3">3rd 12</button>
+        <div class="history-section">
+          <span class="eyebrow">LAST RESULTS</span>
+          <div id="history" class="history"></div>
+        </div>
+      </section>
+
+      <section class="panel betting-panel" aria-label="Betting table">
+        <div class="section-heading">
+          <h2>Place your chips</h2>
+          <span class="eyebrow">SINGLE ZERO</span>
         </div>
 
-        <div class="outside-bets">
-          <button class="table-cell" data-bet="low">1–18</button>
-          <button class="table-cell" data-bet="even">Pair</button>
-          <button class="table-cell red" data-bet="red">Rouge</button>
-          <button class="table-cell black" data-bet="black">Noir</button>
-          <button class="table-cell" data-bet="odd">Impair</button>
-          <button class="table-cell" data-bet="high">19–36</button>
+        <div id="chips" class="chips" aria-label="Chip value"></div>
+
+        <div class="table-scroll">
+          <div id="table" class="table"
+               aria-label="Betting layout"></div>
         </div>
-      </div>
 
-      <div class="active-bet" id="active-bet">Aucune mise placée</div>
+        <div class="bet-summary">
+          <div>
+            <span class="eyebrow">TOTAL BET</span>
+            <strong id="total">0</strong>
+          </div>
+          <div class="summary-right">
+            <span class="eyebrow">LAST NET</span>
+            <strong id="net">—</strong>
+          </div>
+        </div>
 
-      <button id="spin" class="primary">Lancer la bille</button>
-      <button id="clear" class="ghost">Retirer les mises</button>
-      <button id="reset" class="ghost">Réinitialiser la table</button>
+        <div class="tools">
+          <button id="undo" type="button">Undo</button>
+          <button id="double" type="button">×2</button>
+          <button id="clear" type="button">Clear</button>
+          <button id="rebet" type="button">Rebet</button>
+        </div>
 
-      <p class="disclaimer">
-        Jeu de démonstration · Jetons virtuels uniquement · Aucun argent réel
-      </p>
-    </section>
-  </main>
+        <button id="spin" class="spin" type="button">SPIN</button>
 
-  <script src="script.js"></script>
+        <p id="hint" class="hint" role="status">
+          Select a chip. Click a bet.
+        </p>
+
+        <footer>FOR FUN ONLY · NO REAL MONEY</footer>
+      </section>
+    </main>
+  </div>
 </body>
 </html>
