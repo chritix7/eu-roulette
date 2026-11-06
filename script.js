@@ -5,10 +5,12 @@ const redNumbers = new Set([
 ]);
 
 const wheel = document.getElementById("wheel");
-const ball = document.getElementById("ball");
+const deflectors = document.getElementById("deflectors");
+const ballOrbit = document.getElementById("ball-orbit");
 const resultEl = document.getElementById("result");
 const balanceEl = document.getElementById("balance");
 const spinButton = document.getElementById("spin");
+const clearButton = document.getElementById("clear");
 const resetButton = document.getElementById("reset");
 const historyList = document.getElementById("history-list");
 const activeBetEl = document.getElementById("active-bet");
@@ -16,14 +18,13 @@ const numbersGrid = document.getElementById("numbers-grid");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CENTER = 250;
-const OUTER_RADIUS = 245;
-const NUMBER_RADIUS = 205;
-const INNER_RADIUS = 155;
+const OUTER_RADIUS = 238;
+const NUMBER_RADIUS = 198;
+const INNER_RADIUS = 150;
 
 let balance = 1000;
 let selectedChip = 10;
 let bets = [];
-let wheelRotation = 0;
 let ballRotation = 0;
 let spinning = false;
 const history = [];
@@ -59,7 +60,7 @@ function buildWheel() {
     cx: CENTER,
     cy: CENTER,
     r: OUTER_RADIUS,
-    fill: "#1b1508"
+    fill: "#201809"
   }));
 
   numbers.forEach((number, index) => {
@@ -79,11 +80,11 @@ function buildWheel() {
         `A ${INNER_RADIUS} ${INNER_RADIUS} 0 0 0 ${si.x} ${si.y}`,
         "Z"
       ].join(" "),
-      fill: colorOf(number) === "red" ? "#b3202c"
-        : colorOf(number) === "green" ? "#0d7a3f"
-        : "#101013",
-      stroke: "rgba(212,175,55,.75)",
-      "stroke-width": "1.2"
+      fill: colorOf(number) === "red" ? "#a91f2a"
+        : colorOf(number) === "green" ? "#0b6d38"
+        : "#0e0e11",
+      stroke: "rgba(212,175,55,.7)",
+      "stroke-width": "1.1"
     }));
 
     const labelAngle = start + sectorAngle / 2;
@@ -98,7 +99,7 @@ function buildWheel() {
       "text-anchor": "middle",
       "dominant-baseline": "middle",
       transform: `rotate(${labelAngle} ${pos.x} ${pos.y})`,
-      style: "font-family: Inter, sans-serif; paint-order: stroke; stroke: rgba(0,0,0,.55); stroke-width: 3px;"
+      style: "font-family: Inter, sans-serif; paint-order: stroke; stroke: rgba(0,0,0,.6); stroke-width: 3px;"
     });
 
     text.textContent = number;
@@ -110,9 +111,24 @@ function buildWheel() {
     cy: CENTER,
     r: INNER_RADIUS,
     fill: "none",
-    stroke: "rgba(212,175,55,.85)",
-    "stroke-width": "5"
+    stroke: "rgba(212,175,55,.9)",
+    "stroke-width": "6"
   }));
+}
+
+function buildDeflectors() {
+  deflectors.innerHTML = "";
+
+  for (let i = 0; i < 8; i++) {
+    const deflector = document.createElement("div");
+    deflector.className = "deflector";
+    deflector.style.transform = `
+      translate(-50%, -50%)
+      rotate(${i * 45 + 22.5}deg)
+      translateY(-118px)
+    `;
+    deflectors.appendChild(deflector);
+  }
 }
 
 function buildBettingBoard() {
@@ -120,7 +136,7 @@ function buildBettingBoard() {
 
   for (let row = 0; row < 12; row++) {
     for (let column = 0; column < 3; column++) {
-      const number = row * 3 + (3 - column);
+      const number = row * 3 + column + 1;
       const cell = document.createElement("button");
 
       cell.className = `table-cell ${colorOf(number)}`;
@@ -131,6 +147,10 @@ function buildBettingBoard() {
       numbersGrid.appendChild(cell);
     }
   }
+}
+
+function betKey(bet) {
+  return `${bet.type}-${bet.value ?? ""}`;
 }
 
 function betLabel(bet) {
@@ -146,31 +166,60 @@ function betLabel(bet) {
   return "Mise";
 }
 
+function totalBet() {
+  return bets.reduce((sum, bet) => sum + bet.amount, 0);
+}
+
 function updateActiveBet() {
   if (bets.length === 0) {
     activeBetEl.textContent = "Aucune mise placée";
     return;
   }
 
-  const total = bets.reduce((sum, bet) => sum + bet.amount, 0);
-  activeBetEl.textContent = `${bets.length} mise${bets.length > 1 ? "s" : ""} · Total : ${format(total)} jetons`;
+  activeBetEl.textContent =
+    `${bets.length} mise${bets.length > 1 ? "s" : ""} · Total : ${format(totalBet())} jetons`;
 }
 
-function clearSelection() {
+function renderBets() {
   document.querySelectorAll(".table-cell").forEach(cell => {
     cell.classList.remove("selected");
-    const stake = cell.querySelector(".stake");
-    if (stake) stake.remove();
+    const oldChip = cell.querySelector(".bet-chip");
+    if (oldChip) oldChip.remove();
   });
+
+  bets.forEach(bet => {
+    const selector = bet.type === "number"
+      ? `[data-number="${bet.value}"]`
+      : bet.type === "dozen"
+        ? `[data-dozen="${bet.value}"]`
+        : bet.type === "column"
+          ? `[data-column="${bet.value}"]`
+          : `[data-bet="${bet.type}"]`;
+
+    const cell = document.querySelector(selector);
+    if (!cell) return;
+
+    cell.classList.add("selected");
+
+    const chip = document.createElement("span");
+    chip.className = "bet-chip";
+    chip.textContent = bet.amount;
+    cell.appendChild(chip);
+  });
+
+  updateActiveBet();
 }
 
 function placeBet(cell) {
   const type = cell.dataset.bet;
-  const value = cell.dataset.number || cell.dataset.dozen || cell.dataset.column || null;
+  const value =
+    cell.dataset.number ??
+    cell.dataset.dozen ??
+    cell.dataset.column ??
+    null;
 
-  const existing = bets.find(bet =>
-    bet.type === type && String(bet.value) === String(value)
-  );
+  const key = `${type}-${value ?? ""}`;
+  const existing = bets.find(bet => betKey(bet) === key);
 
   if (existing) {
     existing.amount += selectedChip;
@@ -178,21 +227,7 @@ function placeBet(cell) {
     bets.push({ type, value, amount: selectedChip });
   }
 
-  clearSelection();
-  cell.classList.add("selected");
-
-  const stake = document.createElement("span");
-  stake.className = "stake";
-  stake.textContent = bets.find(bet =>
-    bet.type === type && String(bet.value) === String(value)
-  ).amount;
-
-  cell.appendChild(stake);
-  updateActiveBet();
-}
-
-function totalBet() {
-  return bets.reduce((sum, bet) => sum + bet.amount, 0);
+  renderBets();
 }
 
 function payoutForBet(bet, number) {
@@ -259,6 +294,12 @@ document.querySelectorAll(".table-cell").forEach(cell => {
   });
 });
 
+clearButton.addEventListener("click", () => {
+  if (spinning) return;
+  bets = [];
+  renderBets();
+});
+
 spinButton.addEventListener("click", () => {
   if (spinning) return;
 
@@ -278,22 +319,19 @@ spinButton.addEventListener("click", () => {
   spinButton.disabled = true;
   balance -= amount;
   balanceEl.textContent = format(balance);
-  resultEl.textContent = "La roue tourne…";
+  resultEl.textContent = "La bille tourne…";
 
   const winningNumber = Math.floor(Math.random() * 37);
   const sectorAngle = 360 / 37;
 
-  const currentMod = ((wheelRotation % 360) + 360) % 360;
-  const targetMod = ((360 - winningNumber * sectorAngle) % 360 + 360) % 360;
+  const currentMod = ((ballRotation % 360) + 360) % 360;
+  const targetMod = (winningNumber * sectorAngle) % 360;
   let delta = targetMod - currentMod;
 
   if (delta < 0) delta += 360;
 
-  wheelRotation += 1800 + delta;
-  ballRotation -= 2600 + Math.random() * 900;
-
-  wheel.style.transform = `rotate(${wheelRotation}deg)`;
-  ball.style.transform = `translateX(-50%) rotate(${ballRotation}deg)`;
+  ballRotation += 2160 + delta;
+  ballOrbit.style.transform = `rotate(${ballRotation}deg)`;
 
   setTimeout(() => {
     const totalGain = bets.reduce(
@@ -310,7 +348,7 @@ spinButton.addEventListener("click", () => {
       green: "Zéro"
     }[colorOf(winningNumber)];
 
-    resultEl.textContent = `Résultat : ${winningNumber} · ${colorName}`;
+    resultEl.textContent = `La bille s’arrête sur ${winningNumber} · ${colorName}`;
     addHistory(winningNumber);
 
     if (totalGain > 0) {
@@ -320,8 +358,7 @@ spinButton.addEventListener("click", () => {
     }
 
     bets = [];
-    clearSelection();
-    updateActiveBet();
+    renderBets();
 
     spinning = false;
     spinButton.disabled = false;
@@ -341,9 +378,10 @@ resetButton.addEventListener("click", () => {
   balanceEl.textContent = format(balance);
   resultEl.textContent = "Nouvelle partie — placez vos jetons";
   spinButton.disabled = false;
-  clearSelection();
-  updateActiveBet();
+  renderBets();
 });
 
 buildWheel();
+buildDeflectors();
 buildBettingBoard();
+renderBets();

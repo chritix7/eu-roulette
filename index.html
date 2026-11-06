@@ -14,7 +14,7 @@
 
   <header class="topbar">
     <div class="brand">
-      <div class="brand-mark">A</div>
+      <div class="brand-mark">C</div>
       <div>
         <h1>CHRYSION ROYALE</h1>
         <p>European Roulette · Private Table</p>
@@ -30,16 +30,20 @@
   <main class="layout">
     <section class="wheel-panel">
       <div class="wheel-stage">
-        <div class="wheel-frame">
+        <div class="wheel-3d">
+          <div class="wheel-bowl"></div>
           <svg id="wheel" viewBox="0 0 500 500"></svg>
-          <div id="ball" class="ball"></div>
+          <div class="wheel-deflectors" id="deflectors"></div>
+          <div class="ball-orbit" id="ball-orbit">
+            <div class="ball"></div>
+          </div>
           <div class="hub"><span>CHRYSION</span></div>
         </div>
         <div class="pointer"></div>
       </div>
 
       <div id="result" class="result">
-        Placez vos jetons sur le tapis pour lancer la roulette
+        Placez vos jetons sur le tapis puis lancez la roulette
       </div>
 
       <div class="history">
@@ -61,7 +65,6 @@
 
       <div class="roulette-table">
         <button class="table-cell zero" data-bet="number" data-number="0">0</button>
-
         <div class="numbers-grid" id="numbers-grid"></div>
 
         <div class="column-bets">
@@ -86,11 +89,10 @@
         </div>
       </div>
 
-      <div class="active-bet" id="active-bet">
-        Aucune mise placée
-      </div>
+      <div class="active-bet" id="active-bet">Aucune mise placée</div>
 
-      <button id="spin" class="primary">Lancer la roulette</button>
+      <button id="spin" class="primary">Lancer la bille</button>
+      <button id="clear" class="ghost">Retirer les mises</button>
       <button id="reset" class="ghost">Réinitialiser la table</button>
 
       <p class="disclaimer">
