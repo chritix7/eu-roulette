@@ -69,45 +69,154 @@ function ringPath(start, end, inner, outer) {
 }
 
 function buildWheel() {
-  $("wheel").innerHTML = `
-    <defs>
-      <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
-        <stop stop-color="#6c4d1d"/>
-        <stop offset=".28" stop-color="#fff0bd"/>
-        <stop offset=".52" stop-color="#a77d36"/>
-        <stop offset=".78" stop-color="#e9cd86"/>
-        <stop offset="1" stop-color="#70501e"/>
-      </linearGradient>
-      <radialGradient id="bowl" cx=".4" cy=".3" r=".8">
-        <stop stop-color="#626066"/>
-        <stop offset=".5" stop-color="#24262b"/>
-        <stop offset="1" stop-color="#080a0d"/>
-      </radialGradient>
-      <radialGradient id="pearl" cx=".3" cy=".25" r=".8">
-        <stop stop-color="#fff"/>
-        <stop offset=".4" stop-color="#f6f1e5"/>
-        <stop offset="1" stop-color="#8f8b83"/>
-      </radialGradient>
-    </defs>
+  const root = $("wheel");
+  root.innerHTML = "";
+
+  const defs = svgNode("defs", {}, root);
+
+  defs.innerHTML = `
+    <linearGradient id="goldRim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5c4113"/>
+      <stop offset=".18" stop-color="#f8e2a4"/>
+      <stop offset=".38" stop-color="#8d671f"/>
+      <stop offset=".58" stop-color="#ffe9b0"/>
+      <stop offset=".78" stop-color="#8a641d"/>
+      <stop offset="1" stop-color="#4c350f"/>
+    </linearGradient>
+
+    <linearGradient id="goldRim2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7b5a1a"/>
+      <stop offset=".25" stop-color="#ffeab2"/>
+      <stop offset=".5" stop-color="#9d7622"/>
+      <stop offset=".75" stop-color="#f7dd9a"/>
+      <stop offset="1" stop-color="#5b3f10"/>
+    </linearGradient>
+
+    <radialGradient id="bowl" cx=".38" cy=".28" r=".85">
+      <stop offset="0" stop-color="#7a7d84"/>
+      <stop offset=".35" stop-color="#2c2f34"/>
+      <stop offset=".72" stop-color="#121418"/>
+      <stop offset="1" stop-color="#05070a"/>
+    </radialGradient>
+
+    <radialGradient id="hub" cx=".35" cy=".28" r=".8">
+      <stop offset="0" stop-color="#fff0bd"/>
+      <stop offset=".35" stop-color="#c9a052"/>
+      <stop offset=".7" stop-color="#6d4f17"/>
+      <stop offset="1" stop-color="#2c2009"/>
+    </radialGradient>
+
+    <radialGradient id="innerGlass" cx=".35" cy=".25" r=".8">
+      <stop offset="0" stop-color="#ffffff2e"/>
+      <stop offset=".35" stop-color="#ffffff08"/>
+      <stop offset="1" stop-color="#00000055"/>
+    </radialGradient>
+
+    <filter id="wood" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence
+        type="fractalNoise"
+        baseFrequency="0.012 0.09"
+        numOctaves="4"
+        seed="18"
+        result="noise"/>
+      <feColorMatrix
+        in="noise"
+        type="matrix"
+        values="0 0 0 0 0.18
+                0 0 0 0 0.11
+                0 0 0 0 0.05
+                0 0 0 0.55 0"
+        result="grain"/>
+      <feComposite in="grain" in2="SourceGraphic"
+        operator="in" result="woodGrain"/>
+      <feBlend in="SourceGraphic" in2="woodGrain" mode="multiply"/>
+    </filter>
+
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+
+    <filter id="rimShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16"
+        flood-color="#000" flood-opacity=".75"/>
+    </filter>
   `;
 
+  // Large golden under-glow.
   svgNode("circle", {
-    cx: 300, cy: 305, r: 289, fill: "#3c2b13"
-  });
+    cx: 300,
+    cy: 316,
+    r: 292,
+    fill: "#d9a83a",
+    opacity: .22,
+    filter: "url(#softGlow)"
+  }, root);
+
+  // Static base shadow.
+  svgNode("ellipse", {
+    cx: 300,
+    cy: 322,
+    rx: 286,
+    ry: 276,
+    fill: "#000",
+    opacity: .55,
+    filter: "url(#softGlow)"
+  }, root);
+
+  // Slowly rotating outer bowl / wooden track.
+  const spinner = svgNode("g", {
+    class: "wheel-spinner"
+  }, root);
+
   svgNode("circle", {
-    cx: 300, cy: 300, r: 286, fill: "url(#metal)"
-  });
+    cx: 300,
+    cy: 300,
+    r: 286,
+    fill: "url(#goldRim)",
+    filter: "url(#rimShadow)"
+  }, spinner);
+
   svgNode("circle", {
-    cx: 300, cy: 300, r: 273, fill: "#111318",
-    stroke: "#f0cf813f", "stroke-width": 2
-  });
+    cx: 300,
+    cy: 300,
+    r: 272,
+    fill: "#2a1a0c",
+    filter: "url(#wood)"
+  }, spinner);
+
   svgNode("circle", {
-    cx: 300, cy: 300, r: 257, fill: "none",
-    stroke: "#ffffff12", "stroke-width": 15
-  });
+    cx: 300,
+    cy: 300,
+    r: 272,
+    fill: "none",
+    stroke: "#f7dc9b",
+    "stroke-opacity": .22,
+    "stroke-width": 2
+  }, spinner);
+
   svgNode("circle", {
-    cx: 300, cy: 300, r: 244, fill: "url(#metal)"
-  });
+    cx: 300,
+    cy: 300,
+    r: 258,
+    fill: "none",
+    stroke: "url(#goldRim2)",
+    "stroke-width": 13
+  }, spinner);
+
+  svgNode("circle", {
+    cx: 300,
+    cy: 300,
+    r: 250,
+    fill: "none",
+    stroke: "#ffffff",
+    "stroke-opacity": .1,
+    "stroke-width": 2
+  }, spinner);
+
+  // Static pockets and numbers.
+  const pocketsGroup = svgNode("g", {
+    class: "wheel-pockets"
+  }, root);
 
   const fills = {
     red: "#a72d3b",
@@ -125,81 +234,121 @@ function buildWheel() {
       fill: fills[color(number)],
       stroke: "#d8b772",
       "stroke-width": .7
-    });
+    }, pocketsGroup);
 
     const pocket = svgNode("path", {
       d: ringPath(start, end, 166, 199),
       fill: fills[color(number)],
       stroke: "#b59c67",
       "stroke-width": 1.5
-    });
+    }, pocketsGroup);
+
     pockets.set(number, pocket);
 
     const [x, y] = point(middle, 220);
+
     const label = svgNode("text", {
-      x, y,
+      x,
+      y,
       fill: "#fff9ed",
       "font-size": 16,
       "font-weight": 750,
       "text-anchor": "middle",
       "dominant-baseline": "central",
       transform: `rotate(${middle} ${x} ${y})`
-    });
+    }, pocketsGroup);
+
     label.textContent = number;
   });
 
+  // Static inner bowl, separators and hub.
   svgNode("circle", {
-    cx: 300, cy: 300, r: 164,
-    fill: "url(#bowl)", stroke: "url(#metal)", "stroke-width": 4
-  });
+    cx: 300,
+    cy: 300,
+    r: 164,
+    fill: "url(#bowl)",
+    stroke: "url(#goldRim2)",
+    "stroke-width": 5
+  }, root);
 
   for (let i = 0; i < 8; i++) {
     const [x, y] = point(i * 45 + 22.5, 139);
+
     svgNode("rect", {
-      x: x - 3, y: y - 9, width: 6, height: 18, rx: 2,
-      fill: "url(#metal)",
+      x: x - 3,
+      y: y - 10,
+      width: 6,
+      height: 20,
+      rx: 2,
+      fill: "url(#goldRim2)",
       transform: `rotate(${i * 45 + 22.5} ${x} ${y})`
-    });
+    }, root);
   }
 
   svgNode("circle", {
-    cx: 300, cy: 305, r: 85, fill: "#0007"
-  });
+    cx: 300,
+    cy: 300,
+    r: 90,
+    fill: "url(#hub)",
+    filter: "url(#rimShadow)"
+  }, root);
+
   svgNode("circle", {
-    cx: 300, cy: 300, r: 80, fill: "url(#metal)"
-  });
+    cx: 300,
+    cy: 300,
+    r: 68,
+    fill: "url(#bowl)",
+    stroke: "#f0d39155",
+    "stroke-width": 2
+  }, root);
+
   svgNode("circle", {
-    cx: 300, cy: 300, r: 65,
-    fill: "url(#bowl)", stroke: "#e9cf8c80"
-  });
+    cx: 300,
+    cy: 300,
+    r: 68,
+    fill: "url(#innerGlass)"
+  }, root);
 
   const brand = svgNode("text", {
-    x: 300, y: 305,
-    fill: "#ebd39d",
+    x: 300,
+    y: 305,
+    fill: "#f3d795",
     "font-family": "Georgia, serif",
     "font-size": 15,
     "letter-spacing": 2,
     "text-anchor": "middle"
-  });
+  }, root);
+
   brand.textContent = "CHRYSION";
 
   svgNode("ellipse", {
-    id: "ball-shadow", rx: 7, ry: 4, fill: "#0009"
-  });
+    id: "ball-shadow",
+    rx: 7,
+    ry: 4,
+    fill: "#000a"
+  }, root);
+
   svgNode("circle", {
-    id: "ball", r: 6.5, fill: "url(#pearl)",
-    stroke: "#fff9", "stroke-width": .5
-  });
+    id: "ball",
+    r: 6.5,
+    fill: "url(#pearl)",
+    stroke: "#fff9",
+    "stroke-width": .5
+  }, root);
 
   positionBall(0, 258);
 }
 
 function positionBall(angle, radius) {
   const [x, y] = point(angle, radius);
+
   $("ball").setAttribute("cx", x);
   $("ball").setAttribute("cy", y);
+
+  const shadowOffset = 4 + (258 - radius) * .025;
+
   $("ball-shadow").setAttribute("cx", x + 2);
-  $("ball-shadow").setAttribute("cy", y + 5);
+  $("ball-shadow").setAttribute("cy", y + shadowOffset);
 }
 
 function addBet(id, label, matches, multiplier, column, row,

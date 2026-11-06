@@ -444,3 +444,57 @@ footer {
     min-width: 420px;
   }
 }
+
+/* Slow, premium outer-wheel motion */
+@media (prefers-reduced-motion: no-preference) {
+  .wheel-spinner {
+    transform-origin: 300px 300px;
+    animation: wheel-drift 90s linear infinite;
+  }
+}
+
+@keyframes wheel-drift {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Golden under-glow and deeper shadow */
+#wheel {
+  filter: drop-shadow(0 30px 45px rgba(0, 0, 0, .75));
+}
+
+.wheel-space::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4%;
+  width: 72%;
+  height: 12%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(219, 168, 58, .35),
+    transparent 70%
+  );
+  filter: blur(18px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.wheel-space {
+  position: relative;
+}
+
+#ball {
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, .65));
+}
+
+#ball-shadow {
+  opacity: .55;
+}
