@@ -352,7 +352,7 @@ function buildWheel() {
 
   svgNode("circle", {
     id: "ball",
-    r: 8.5,
+    r: 9.5,
     fill: "url(#pearl)",
     stroke: "#ffffff",
     "stroke-width": 1.2,
