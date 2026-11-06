@@ -161,6 +161,10 @@ function buildWheel() {
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
+
+        <filter id="ballMotion" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="2.2 0.4"/>
+    </filter>
   `;
 
   // Large golden under-glow.
@@ -352,12 +356,15 @@ function buildWheel() {
 
   svgNode("circle", {
     id: "ball",
-    r: 9.5,
+    r: 8.5,
     fill: "url(#pearl)",
     stroke: "#ffffff",
     "stroke-width": 1.2,
     filter: "url(#ballGlow)"
   }, root);
+
+    const ball = $("ball");
+  ball.style.willChange = "cx, cy";
 
   positionBall(0, 258);
 }
@@ -560,50 +567,205 @@ function randomNumber() {
   return data[0] % 37;
 }
 
+let audio = null;
+
+function soundContext() {
+  if (!audio) {
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  if (audio.state === "suspended") {
+    audio.resume();
+  }
+
+  return audio;
+}
+
+function playRoll(duration = 6200) {
+  const context = soundContext();
+  const noise = context.createBufferSource();
+  const filter = context.createBiquadFilter();
+  const gain = context.createGain();
+
+  const length = Math.ceil(context.sampleRate * duration);
+  const buffer = context.createBuffer(1, length, context.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < length; i++) {
+    data[i] = (Math.random() * 2 - 1) * .35;
+  }
+
+  noise.buffer = buffer;
+  filter.type = "bandpass";
+  filter.frequency.value = 850;
+  filter.Q.value = .8;
+
+  gain.gain.setValueAtTime(.0001, context.currentTime);
+  gain.gain.linearRampToValueAtTime(.16, context.currentTime + .25);
+  gain.gain.exponentialRampToValueAtTime(.0001, context.currentTime + duration);
+
+  noise.connect(filter).connect(gain).connect(context.destination);
+  noise.start();
+  noise.stop(context.currentTime + duration);
+}
+
+function playDeflector(time = 0) {
+  const context = soundContext();
+  const start = context.currentTime + time;
+
+  const osc = context.createOscillator();
+  const gain = context.createGain();
+
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(2100, start);
+  osc.frequency.exponentialRampToValueAtTime(900, start + .07);
+
+  gain.gain.setValueAtTime(.0001, start);
+  gain.gain.linearRampToValueAtTime(.18, start + .008);
+  gain.gain.exponentialRampToValueAtTime(.0001, start + .09);
+
+  osc.connect(gain).connect(context.destination);
+  osc.start(start);
+  osc.stop(start + .1);
+}
+
+function playImpact() {
+  const context = soundContext();
+  const now = context.currentTime;
+
+  const osc = context.createOscillator();
+  const gain = context.createGain();
+
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(180, now);
+  osc.frequency.exponentialRampToValueAtTime(55, now + .18);
+
+  gain.gain.setValueAtTime(.0001, now);
+  gain.gain.linearRampToValueAtTime(.3, now + .012);
+  gain.gain.exponentialRampToValueAtTime(.0001, now + .28);
+
+  osc.connect(gain).connect(context.destination);
+  osc.start(now);
+  osc.stop(now + .3);
+}
+
+function playWin() {
+  const context = soundContext();
+  const now = context.currentTime;
+
+  [523.25, 659.25, 783.99].forEach((frequency, index) => {
+    const osc = context.createOscillator();
+    const gain = context.createGain();
+    const start = now + index * .09;
+
+    osc.type = "triangle";
+    osc.frequency.value = frequency;
+
+    gain.gain.setValueAtTime(.0001, start);
+    gain.gain.linearRampToValueAtTime(.12, start + .02);
+    gain.gain.exponentialRampToValueAtTime(.0001, start + .45);
+
+    osc.connect(gain).connect(context.destination);
+    osc.start(start);
+    osc.stop(start + .5);
+  });
+}
+
 function animateBall(number) {
   return new Promise(resolve => {
     const index = ORDER.indexOf(number);
     const target = index * STEP;
+
     const current = ((ballAngle % 360) + 360) % 360;
     const delta = (target - current + 360) % 360;
+
     const startAngle = ballAngle;
     const endAngle = startAngle + 360 * 7 + delta;
+
     const startRadius = ballRadius;
+    const trackRadius = 258;
+    const pocketRadius = 182.5;
+
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reduced ? 200 : 6200;
+    const duration = reduced ? 500 : 6800;
     const startTime = performance.now();
 
+    const ball = $("ball");
+    let lastDeflector = -1;
+
+    if (!reduced) {
+      ball.setAttribute("filter", "url(#ballMotion)");
+    }
+
+    playRoll(duration);
+
     function frame(now) {
-      const t = Math.min(1, (now - startTime) / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
+      const raw = Math.min(1, (now - startTime) / duration);
+      const t = raw;
+
+      // Global deceleration.
+      const eased = 1 - Math.pow(1 - t, 2.35);
       const angle = startAngle + (endAngle - startAngle) * eased;
 
-      // First return to the outer track, then fall into the pocket.
+      // Base radial path.
       let radius;
-      if (t < .15) {
-        const k = t / .15;
-        radius = startRadius + (258 - startRadius) * k;
-      } else if (t < .65) {
-        radius = 258;
-      } else {
-        const k = (t - .65) / .35;
-        const smooth = k * k * (3 - 2 * k);
-        radius = 258 + (182.5 - 258) * smooth;
 
-        if (!reduced) {
-          radius += Math.sin(k * Math.PI * 8) * 3 * (1 - k);
-        }
+      if (t < .16) {
+        // Fast launch on the outer track.
+        const k = t / .16;
+        radius = startRadius + (trackRadius - startRadius) * k;
+      } else if (t < .62) {
+        // Decelerating on the outer track.
+        radius = trackRadius;
+      } else if (t < .84) {
+        // Deflector bounces, then rolls inward.
+        const k = (t - .62) / .22;
+        const smooth = k * k * (3 - 2 * k);
+
+        radius = trackRadius + (196 - trackRadius) * smooth;
+        radius += Math.sin(k * Math.PI * 3) * 7 * (1 - k);
+      } else {
+        // Final drop into the pocket.
+        const k = (t - .84) / .16;
+        const smooth = k * k * (3 - 2 * k);
+
+        radius = 196 + (pocketRadius - 196) * smooth;
+        radius += Math.sin(k * Math.PI * 2) * 4 * (1 - k);
       }
 
       positionBall(angle, radius);
 
+      // Motion blur only during the fast phase.
+      if (!reduced) {
+        if (t < .55) {
+          ball.setAttribute("filter", "url(#ballMotion)");
+        } else {
+          ball.setAttribute("filter", "url(#ballGlow)");
+        }
+      }
+
+      // Trigger two or three deflector sounds.
+      if (!reduced && t >= .58) {
+        const deflectorIndex = Math.floor((t - .58) / .08);
+
+        if (deflectorIndex > lastDeflector && deflectorIndex < 3) {
+          lastDeflector = deflectorIndex;
+          playDeflector();
+        }
+      }
+
       if (t < 1) {
         requestAnimationFrame(frame);
       } else {
-        // Exact sector center, not a boundary.
+        // Exact center of the winning pocket.
         ballAngle = target;
-        ballRadius = 182.5;
+        ballRadius = pocketRadius;
         positionBall(ballAngle, ballRadius);
+
+        ball.setAttribute("filter", "url(#ballGlow)");
+        playImpact();
+        pulsePocket(number);
+
         resolve();
       }
     }
@@ -612,12 +774,29 @@ function animateBall(number) {
   });
 }
 
+function pulsePocket(number) {
+  const pocket = pockets.get(number);
+
+  if (!pocket) return;
+
+  pocket.classList.add("winning");
+
+  setTimeout(() => {
+    pocket.classList.remove("winning");
+  }, 2000);
+}
+
 function showResult(number, net) {
   const badge = $("result-number");
   badge.className = `result-number ${color(number)}`;
   badge.textContent = number;
 
+  if (net > 0) {
+    playWin();
+  }
+
   const colorName = number === 0 ? "GREEN" : color(number).toUpperCase();
+
   $("result").textContent = `${number} ${colorName} · ${
     net > 0 ? `NET WIN +${format(net)}` :
     net === 0 ? "BREAK EVEN" : `NET LOSS ${format(-net)}`
@@ -656,7 +835,7 @@ $("spin").addEventListener("click", async () => {
   const number = randomNumber();
 
   spinning = true;
-  message("No more bets.");
+  message("Ball in play.");
   $("result").textContent = "Ball in play";
   render();
 

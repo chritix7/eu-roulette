@@ -498,3 +498,31 @@ footer {
 #ball-shadow {
   opacity: .55;
 }
+
+.wheel-pockets path.winning {
+  animation: pocket-win 2s ease-out;
+}
+
+@keyframes pocket-win {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  18%,
+  58% {
+    filter: brightness(1.75) saturate(1.25);
+  }
+
+  38%,
+  78% {
+    filter: brightness(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel-pockets path.winning {
+    animation: none;
+    filter: brightness(1.5);
+  }
+}
