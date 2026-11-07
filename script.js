@@ -721,20 +721,68 @@ function playImpact() {
 
   const start = () => {
     const now = context.currentTime;
-    const osc = context.createOscillator();
-    const gain = context.createGain();
 
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(165, now);
-    osc.frequency.exponentialRampToValueAtTime(48, now + .2);
+    // Soft wooden pocket contact.
+    const body = context.createOscillator();
+    const bodyGain = context.createGain();
+    const bodyFilter = context.createBiquadFilter();
 
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.linearRampToValueAtTime(.22, now + .01);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + .3);
+    body.type = "sine";
+    body.frequency.setValueAtTime(310, now);
+    body.frequency.exponentialRampToValueAtTime(180, now + .09);
 
-    osc.connect(gain).connect(context.destination);
-    osc.start(now);
-    osc.stop(now + .32);
+    bodyFilter.type = "lowpass";
+    bodyFilter.frequency.value = 900;
+
+    bodyGain.gain.setValueAtTime(.0001, now);
+    bodyGain.gain.linearRampToValueAtTime(.09, now + .008);
+    bodyGain.gain.exponentialRampToValueAtTime(.0001, now + .16);
+
+    body.connect(bodyFilter);
+    bodyFilter.connect(bodyGain);
+    bodyGain.connect(context.destination);
+    body.start(now);
+    body.stop(now + .18);
+
+    // Subtle metallic ball contact.
+    const tick = context.createOscillator();
+    const tickGain = context.createGain();
+    const tickFilter = context.createBiquadFilter();
+
+    tick.type = "triangle";
+    tick.frequency.setValueAtTime(2350, now + .012);
+    tick.frequency.exponentialRampToValueAtTime(1250, now + .07);
+
+    tickFilter.type = "bandpass";
+    tickFilter.frequency.value = 2100;
+    tickFilter.Q.value = 1.4;
+
+    tickGain.gain.setValueAtTime(.0001, now + .012);
+    tickGain.gain.linearRampToValueAtTime(.05, now + .018);
+    tickGain.gain.exponentialRampToValueAtTime(.0001, now + .11);
+
+    tick.connect(tickFilter);
+    tickFilter.connect(tickGain);
+    tickGain.connect(context.destination);
+    tick.start(now + .012);
+    tick.stop(now + .13);
+
+    // Very short settle tail.
+    const settle = context.createOscillator();
+    const settleGain = context.createGain();
+
+    settle.type = "sine";
+    settle.frequency.setValueAtTime(145, now + .05);
+    settle.frequency.exponentialRampToValueAtTime(95, now + .22);
+
+    settleGain.gain.setValueAtTime(.0001, now + .05);
+    settleGain.gain.linearRampToValueAtTime(.045, now + .06);
+    settleGain.gain.exponentialRampToValueAtTime(.0001, now + .28);
+
+    settle.connect(settleGain);
+    settleGain.connect(context.destination);
+    settle.start(now + .05);
+    settle.stop(now + .3);
   };
 
   if (context.state === "running") {
