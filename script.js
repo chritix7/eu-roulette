@@ -613,38 +613,52 @@ function createRollNoise(context) {
   return buffer;
 }
 
+let rollSource = null;
+let rollGain = null;
+
 function playRoll(duration = 6800) {
   const context = soundContext();
 
   const start = () => {
+    // Stop any previous rolling sound.
+    if (rollSource) {
+      try {
+        rollSource.stop();
+      } catch (error) {
+        // The previous source may already be stopped.
+      }
+      rollSource = null;
+      rollGain = null;
+    }
+
     const source = context.createBufferSource();
     const lowpass = context.createBiquadFilter();
-    const highpass = context.createBiquadFilter();
     const gain = context.createGain();
 
     source.buffer = createRollNoise(context);
     source.loop = true;
 
     lowpass.type = "lowpass";
-    lowpass.frequency.value = 1400;
-
-    highpass.type = "highpass";
-    highpass.frequency.value = 220;
+    lowpass.frequency.value = 620;
+    lowpass.Q.value = .4;
 
     const now = context.currentTime;
+    const fadeOut = 1.4;
 
     gain.gain.setValueAtTime(.0001, now);
-    gain.gain.linearRampToValueAtTime(.055, now + .35);
-    gain.gain.linearRampToValueAtTime(.028, now + duration * .55);
+    gain.gain.linearRampToValueAtTime(.022, now + .5);
+    gain.gain.setValueAtTime(.022, now + duration - fadeOut);
     gain.gain.linearRampToValueAtTime(.0001, now + duration);
 
-    source.connect(highpass);
-    highpass.connect(lowpass);
+    source.connect(lowpass);
     lowpass.connect(gain);
     gain.connect(context.destination);
 
     source.start(now);
     source.stop(now + duration + .05);
+
+    rollSource = source;
+    rollGain = gain;
   };
 
   if (context.state === "running") {
@@ -652,6 +666,26 @@ function playRoll(duration = 6800) {
   } else {
     context.resume().then(start).catch(() => {});
   }
+}
+
+function stopRoll() {
+  if (!rollSource) return;
+
+  try {
+    if (rollGain) {
+      const now = audio.currentTime;
+      rollGain.gain.cancelScheduledValues(now);
+      rollGain.gain.setValueAtTime(rollGain.gain.value, now);
+      rollGain.gain.linearRampToValueAtTime(.0001, now + .18);
+    }
+
+    rollSource.stop(audio.currentTime + .2);
+  } catch (error) {
+    // Ignore if the source has already stopped.
+  }
+
+  rollSource = null;
+  rollGain = null;
 }
 
 function playDeflector() {
@@ -825,6 +859,7 @@ function animateBall(number) {
         positionBall(ballAngle, ballRadius);
         ball.setAttribute("filter", "url(#ballGlow)");
 
+        stopRoll();
         playImpact();
         pulsePocket(number);
 
