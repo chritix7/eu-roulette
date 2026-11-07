@@ -568,107 +568,177 @@ function randomNumber() {
 }
 
 let audio = null;
+let rollNoise = null;
 
 function soundContext() {
   if (!audio) {
-    audio = new (window.AudioContext || window.webkitAudioContext)();
-  }
-
-  if (audio.state === "suspended") {
-    audio.resume();
+    audio = new (window.AudioContext || window.webkitAudioContext)({
+      latencyHint: "interactive"
+    });
   }
 
   return audio;
 }
 
-function playRoll(duration = 6200) {
-  const context = soundContext();
-  const noise = context.createBufferSource();
-  const filter = context.createBiquadFilter();
-  const gain = context.createGain();
+// Prepare audio as soon as the user interacts with the page.
+document.addEventListener(
+  "pointerdown",
+  () => {
+    const context = soundContext();
 
-  const length = Math.ceil(context.sampleRate * duration);
+    if (context.state !== "running") {
+      context.resume();
+    }
+  },
+  { once: false }
+);
+
+function createRollNoise(context) {
+  if (rollNoise) return rollNoise;
+
+  const seconds = 1;
+  const length = Math.floor(context.sampleRate * seconds);
   const buffer = context.createBuffer(1, length, context.sampleRate);
   const data = buffer.getChannelData(0);
 
+  let previous = 0;
+
   for (let i = 0; i < length; i++) {
-    data[i] = (Math.random() * 2 - 1) * .35;
+    const white = Math.random() * 2 - 1;
+    previous = previous * .96 + white * .04;
+    data[i] = previous * 3.2;
   }
 
-  noise.buffer = buffer;
-  filter.type = "bandpass";
-  filter.frequency.value = 850;
-  filter.Q.value = .8;
-
-  gain.gain.setValueAtTime(.0001, context.currentTime);
-  gain.gain.linearRampToValueAtTime(.16, context.currentTime + .25);
-  gain.gain.exponentialRampToValueAtTime(.0001, context.currentTime + duration);
-
-  noise.connect(filter).connect(gain).connect(context.destination);
-  noise.start();
-  noise.stop(context.currentTime + duration);
+  rollNoise = buffer;
+  return buffer;
 }
 
-function playDeflector(time = 0) {
+function playRoll(duration = 6800) {
   const context = soundContext();
-  const start = context.currentTime + time;
 
-  const osc = context.createOscillator();
-  const gain = context.createGain();
+  const start = () => {
+    const source = context.createBufferSource();
+    const lowpass = context.createBiquadFilter();
+    const highpass = context.createBiquadFilter();
+    const gain = context.createGain();
 
-  osc.type = "triangle";
-  osc.frequency.setValueAtTime(2100, start);
-  osc.frequency.exponentialRampToValueAtTime(900, start + .07);
+    source.buffer = createRollNoise(context);
+    source.loop = true;
 
-  gain.gain.setValueAtTime(.0001, start);
-  gain.gain.linearRampToValueAtTime(.18, start + .008);
-  gain.gain.exponentialRampToValueAtTime(.0001, start + .09);
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 1400;
 
-  osc.connect(gain).connect(context.destination);
-  osc.start(start);
-  osc.stop(start + .1);
+    highpass.type = "highpass";
+    highpass.frequency.value = 220;
+
+    const now = context.currentTime;
+
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.linearRampToValueAtTime(.055, now + .35);
+    gain.gain.linearRampToValueAtTime(.028, now + duration * .55);
+    gain.gain.linearRampToValueAtTime(.0001, now + duration);
+
+    source.connect(highpass);
+    highpass.connect(lowpass);
+    lowpass.connect(gain);
+    gain.connect(context.destination);
+
+    source.start(now);
+    source.stop(now + duration + .05);
+  };
+
+  if (context.state === "running") {
+    start();
+  } else {
+    context.resume().then(start).catch(() => {});
+  }
+}
+
+function playDeflector() {
+  const context = soundContext();
+
+  const start = () => {
+    const now = context.currentTime;
+    const osc = context.createOscillator();
+    const gain = context.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(1750 + Math.random() * 500, now);
+    osc.frequency.exponentialRampToValueAtTime(720, now + .06);
+
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.linearRampToValueAtTime(.09, now + .006);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + .08);
+
+    osc.connect(gain).connect(context.destination);
+    osc.start(now);
+    osc.stop(now + .09);
+  };
+
+  if (context.state === "running") {
+    start();
+  } else {
+    context.resume().then(start).catch(() => {});
+  }
 }
 
 function playImpact() {
   const context = soundContext();
-  const now = context.currentTime;
 
-  const osc = context.createOscillator();
-  const gain = context.createGain();
+  const start = () => {
+    const now = context.currentTime;
+    const osc = context.createOscillator();
+    const gain = context.createGain();
 
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(180, now);
-  osc.frequency.exponentialRampToValueAtTime(55, now + .18);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(165, now);
+    osc.frequency.exponentialRampToValueAtTime(48, now + .2);
 
-  gain.gain.setValueAtTime(.0001, now);
-  gain.gain.linearRampToValueAtTime(.3, now + .012);
-  gain.gain.exponentialRampToValueAtTime(.0001, now + .28);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.linearRampToValueAtTime(.22, now + .01);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + .3);
 
-  osc.connect(gain).connect(context.destination);
-  osc.start(now);
-  osc.stop(now + .3);
+    osc.connect(gain).connect(context.destination);
+    osc.start(now);
+    osc.stop(now + .32);
+  };
+
+  if (context.state === "running") {
+    start();
+  } else {
+    context.resume().then(start).catch(() => {});
+  }
 }
 
 function playWin() {
   const context = soundContext();
-  const now = context.currentTime;
 
-  [523.25, 659.25, 783.99].forEach((frequency, index) => {
-    const osc = context.createOscillator();
-    const gain = context.createGain();
-    const start = now + index * .09;
+  const start = () => {
+    const now = context.currentTime;
 
-    osc.type = "triangle";
-    osc.frequency.value = frequency;
+    [523.25, 659.25, 783.99].forEach((frequency, index) => {
+      const osc = context.createOscillator();
+      const gain = context.createGain();
+      const time = now + index * .08;
 
-    gain.gain.setValueAtTime(.0001, start);
-    gain.gain.linearRampToValueAtTime(.12, start + .02);
-    gain.gain.exponentialRampToValueAtTime(.0001, start + .45);
+      osc.type = "triangle";
+      osc.frequency.value = frequency;
 
-    osc.connect(gain).connect(context.destination);
-    osc.start(start);
-    osc.stop(start + .5);
-  });
+      gain.gain.setValueAtTime(.0001, time);
+      gain.gain.linearRampToValueAtTime(.07, time + .015);
+      gain.gain.exponentialRampToValueAtTime(.0001, time + .5);
+
+      osc.connect(gain).connect(context.destination);
+      osc.start(time);
+      osc.stop(time + .55);
+    });
+  };
+
+  if (context.state === "running") {
+    start();
+  } else {
+    context.resume().then(start).catch(() => {});
+  }
 }
 
 function animateBall(number) {
@@ -693,10 +763,14 @@ function animateBall(number) {
     const ball = $("ball");
     let lastDeflector = -1;
 
-    if (!reduced) {
+        if (!reduced) {
       ball.setAttribute("filter", "url(#ballMotion)");
     }
 
+    // Start the visual animation immediately.
+    requestAnimationFrame(frame);
+
+    // Prepare the rolling sound without delaying the animation.
     playRoll(duration);
 
     function frame(now) {
@@ -755,7 +829,6 @@ function animateBall(number) {
       }
 
       if (t < 1) {
-        requestAnimationFrame(frame);
       } else {
         // Exact center of the winning pocket.
         ballAngle = target;
