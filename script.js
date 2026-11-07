@@ -763,43 +763,33 @@ function animateBall(number) {
     const ball = $("ball");
     let lastDeflector = -1;
 
-        if (!reduced) {
+    if (!reduced) {
       ball.setAttribute("filter", "url(#ballMotion)");
     }
 
-    // Start the visual animation immediately.
-    requestAnimationFrame(frame);
-
-    // Prepare the rolling sound without delaying the animation.
     playRoll(duration);
 
     function frame(now) {
-      const raw = Math.min(1, (now - startTime) / duration);
-      const t = raw;
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
 
-      // Global deceleration.
       const eased = 1 - Math.pow(1 - t, 2.35);
       const angle = startAngle + (endAngle - startAngle) * eased;
 
-      // Base radial path.
       let radius;
 
       if (t < .16) {
-        // Fast launch on the outer track.
         const k = t / .16;
         radius = startRadius + (trackRadius - startRadius) * k;
       } else if (t < .62) {
-        // Decelerating on the outer track.
         radius = trackRadius;
       } else if (t < .84) {
-        // Deflector bounces, then rolls inward.
         const k = (t - .62) / .22;
         const smooth = k * k * (3 - 2 * k);
 
         radius = trackRadius + (196 - trackRadius) * smooth;
         radius += Math.sin(k * Math.PI * 3) * 7 * (1 - k);
       } else {
-        // Final drop into the pocket.
         const k = (t - .84) / .16;
         const smooth = k * k * (3 - 2 * k);
 
@@ -809,7 +799,6 @@ function animateBall(number) {
 
       positionBall(angle, radius);
 
-      // Motion blur only during the fast phase.
       if (!reduced) {
         if (t < .55) {
           ball.setAttribute("filter", "url(#ballMotion)");
@@ -818,7 +807,6 @@ function animateBall(number) {
         }
       }
 
-      // Trigger two or three deflector sounds.
       if (!reduced && t >= .58) {
         const deflectorIndex = Math.floor((t - .58) / .08);
 
@@ -829,13 +817,14 @@ function animateBall(number) {
       }
 
       if (t < 1) {
+        requestAnimationFrame(frame);
       } else {
-        // Exact center of the winning pocket.
         ballAngle = target;
         ballRadius = pocketRadius;
-        positionBall(ballAngle, ballRadius);
 
+        positionBall(ballAngle, ballRadius);
         ball.setAttribute("filter", "url(#ballGlow)");
+
         playImpact();
         pulsePocket(number);
 
