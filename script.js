@@ -566,6 +566,8 @@ $("table").addEventListener("click", event => {
 
   const id = cell.dataset.bet;
   commit({ ...bets, [id]: (bets[id] || 0) + chip });
+
+  playChip();
 });
 
 $("chips").addEventListener("click", event => {
@@ -611,6 +613,10 @@ function randomNumber() {
 
 let audio = null;
 let rollNoise = null;
+let rollSource = null;
+let rollGain = null;
+let rollFilter = null;
+let soundEnabled = true;
 
 function soundContext() {
   if (!audio) {
@@ -622,7 +628,6 @@ function soundContext() {
   return audio;
 }
 
-// Prepare audio as soon as the user interacts with the page.
 document.addEventListener(
   "pointerdown",
   () => {
@@ -638,7 +643,7 @@ document.addEventListener(
 function createRollNoise(context) {
   if (rollNoise) return rollNoise;
 
-  const seconds = 1;
+  const seconds = 2;
   const length = Math.floor(context.sampleRate * seconds);
   const buffer = context.createBuffer(1, length, context.sampleRate);
   const data = buffer.getChannelData(0);
@@ -647,60 +652,88 @@ function createRollNoise(context) {
 
   for (let i = 0; i < length; i++) {
     const white = Math.random() * 2 - 1;
-    previous = previous * .96 + white * .04;
-    data[i] = previous * 3.2;
+    previous = previous * .965 + white * .035;
+    data[i] = previous * 2.6;
   }
 
   rollNoise = buffer;
   return buffer;
 }
 
-let rollSource = null;
-let rollGain = null;
+function stopRoll() {
+  if (!rollSource) return;
+
+  try {
+    if (rollGain) {
+      const now = audio.currentTime;
+
+      rollGain.gain.cancelScheduledValues(now);
+      rollGain.gain.setValueAtTime(rollGain.gain.value, now);
+      rollGain.gain.setTargetAtTime(.0001, now, .08);
+    }
+
+    rollSource.stop(audio.currentTime + .3);
+  } catch (error) {
+    // The source may already have stopped.
+  }
+
+  rollSource = null;
+  rollGain = null;
+  rollFilter = null;
+}
 
 function playRoll(duration = 6800) {
+  if (!soundEnabled) return;
+
   const context = soundContext();
 
   const start = () => {
-    // Stop any previous rolling sound.
-    if (rollSource) {
-      try {
-        rollSource.stop();
-      } catch (error) {
-        // The previous source may already be stopped.
-      }
-      rollSource = null;
-      rollGain = null;
-    }
+    stopRoll();
 
     const source = context.createBufferSource();
+    const highpass = context.createBiquadFilter();
     const lowpass = context.createBiquadFilter();
     const gain = context.createGain();
 
     source.buffer = createRollNoise(context);
     source.loop = true;
 
+    highpass.type = "highpass";
+    highpass.frequency.value = 180;
+
     lowpass.type = "lowpass";
-    lowpass.frequency.value = 620;
-    lowpass.Q.value = .4;
+    lowpass.frequency.setValueAtTime(950, context.currentTime);
+    lowpass.frequency.exponentialRampToValueAtTime(
+      260,
+      context.currentTime + duration
+    );
+
+    // The ball slows down: playback rate follows the same curve.
+    source.playbackRate.setValueAtTime(1, context.currentTime);
+    source.playbackRate.linearRampToValueAtTime(
+      .38,
+      context.currentTime + duration
+    );
 
     const now = context.currentTime;
-    const fadeOut = 1.4;
+    const fadeOut = 1.5;
 
     gain.gain.setValueAtTime(.0001, now);
-    gain.gain.linearRampToValueAtTime(.022, now + .5);
-    gain.gain.setValueAtTime(.022, now + duration - fadeOut);
+    gain.gain.linearRampToValueAtTime(.028, now + .45);
+    gain.gain.setValueAtTime(.028, now + duration - fadeOut);
     gain.gain.linearRampToValueAtTime(.0001, now + duration);
 
-    source.connect(lowpass);
+    source.connect(highpass);
+    highpass.connect(lowpass);
     lowpass.connect(gain);
     gain.connect(context.destination);
 
     source.start(now);
-    source.stop(now + duration + .05);
+    source.stop(now + duration + .08);
 
     rollSource = source;
     rollGain = gain;
+    rollFilter = lowpass;
   };
 
   if (context.state === "running") {
@@ -710,45 +743,74 @@ function playRoll(duration = 6800) {
   }
 }
 
-function stopRoll() {
-  if (!rollSource) return;
+function playChip() {
+  if (!soundEnabled) return;
 
-  try {
-    if (rollGain) {
-      const now = audio.currentTime;
-      rollGain.gain.cancelScheduledValues(now);
-      rollGain.gain.setValueAtTime(rollGain.gain.value, now);
-      rollGain.gain.linearRampToValueAtTime(.0001, now + .18);
-    }
+  const context = soundContext();
 
-    rollSource.stop(audio.currentTime + .2);
-  } catch (error) {
-    // Ignore if the source has already stopped.
+  const start = () => {
+    const now = context.currentTime;
+
+    const osc = context.createOscillator();
+    const gain = context.createGain();
+    const filter = context.createBiquadFilter();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(880 + Math.random() * 180, now);
+    osc.frequency.exponentialRampToValueAtTime(520, now + .05);
+
+    filter.type = "bandpass";
+    filter.frequency.value = 1150;
+    filter.Q.value = 1.1;
+
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.linearRampToValueAtTime(.055, now + .005);
+    gain.gain.setTargetAtTime(.0001, now + .012, .035);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(context.destination);
+
+    osc.start(now);
+    osc.stop(now + .12);
+  };
+
+  if (context.state === "running") {
+    start();
+  } else {
+    context.resume().then(start).catch(() => {});
   }
-
-  rollSource = null;
-  rollGain = null;
 }
 
 function playDeflector() {
+  if (!soundEnabled) return;
+
   const context = soundContext();
 
   const start = () => {
     const now = context.currentTime;
     const osc = context.createOscillator();
     const gain = context.createGain();
+    const filter = context.createBiquadFilter();
 
     osc.type = "triangle";
-    osc.frequency.setValueAtTime(1750 + Math.random() * 500, now);
-    osc.frequency.exponentialRampToValueAtTime(720, now + .06);
+    osc.frequency.setValueAtTime(1650 + Math.random() * 450, now);
+    osc.frequency.exponentialRampToValueAtTime(760, now + .055);
+
+    filter.type = "bandpass";
+    filter.frequency.value = 1900;
+    filter.Q.value = 1.5;
 
     gain.gain.setValueAtTime(.0001, now);
-    gain.gain.linearRampToValueAtTime(.09, now + .006);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + .08);
+    gain.gain.linearRampToValueAtTime(.065, now + .005);
+    gain.gain.setTargetAtTime(.0001, now + .012, .03);
 
-    osc.connect(gain).connect(context.destination);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(context.destination);
+
     osc.start(now);
-    osc.stop(now + .09);
+    osc.stop(now + .1);
   };
 
   if (context.state === "running") {
@@ -759,12 +821,12 @@ function playDeflector() {
 }
 
 function playApproach() {
+  if (!soundEnabled) return;
+
   const context = soundContext();
 
   const start = () => {
     const now = context.currentTime;
-
-    // Soft descending roll as the ball leaves the outer track.
     const source = context.createBufferSource();
     const filter = context.createBiquadFilter();
     const gain = context.createGain();
@@ -773,12 +835,12 @@ function playApproach() {
     source.loop = true;
 
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(1100, now);
-    filter.frequency.exponentialRampToValueAtTime(360, now + .55);
+    filter.frequency.setValueAtTime(950, now);
+    filter.frequency.exponentialRampToValueAtTime(300, now + .55);
 
     gain.gain.setValueAtTime(.0001, now);
-    gain.gain.linearRampToValueAtTime(.028, now + .07);
-    gain.gain.setTargetAtTime(.0001, now + .3, .16);
+    gain.gain.linearRampToValueAtTime(.024, now + .06);
+    gain.gain.setTargetAtTime(.0001, now + .28, .15);
 
     source.connect(filter);
     filter.connect(gain);
@@ -796,47 +858,49 @@ function playApproach() {
 }
 
 function playImpact() {
+  if (!soundEnabled) return;
+
   const context = soundContext();
 
   const start = () => {
     const now = context.currentTime;
 
-    // Felt-like first contact.
+    // Soft felt contact.
     const contact = context.createBufferSource();
     const contactFilter = context.createBiquadFilter();
     const contactGain = context.createGain();
 
     contact.buffer = createRollNoise(context);
     contactFilter.type = "bandpass";
-    contactFilter.frequency.value = 520;
+    contactFilter.frequency.value = 480;
     contactFilter.Q.value = 1.1;
 
     contactGain.gain.setValueAtTime(.0001, now);
-    contactGain.gain.linearRampToValueAtTime(.07, now + .006);
-    contactGain.gain.setTargetAtTime(.0001, now + .012, .045);
+    contactGain.gain.linearRampToValueAtTime(.055, now + .005);
+    contactGain.gain.setTargetAtTime(.0001, now + .011, .04);
 
     contact.connect(contactFilter);
     contactFilter.connect(contactGain);
     contactGain.connect(context.destination);
     contact.start(now);
-    contact.stop(now + .22);
+    contact.stop(now + .2);
 
     // Warm wooden resonance.
     const wood = context.createOscillator();
     const woodGain = context.createGain();
 
     wood.type = "sine";
-    wood.frequency.setValueAtTime(238, now + .012);
-    wood.frequency.exponentialRampToValueAtTime(158, now + .16);
+    wood.frequency.setValueAtTime(245, now + .01);
+    wood.frequency.exponentialRampToValueAtTime(152, now + .15);
 
-    woodGain.gain.setValueAtTime(.0001, now + .012);
-    woodGain.gain.linearRampToValueAtTime(.055, now + .018);
-    woodGain.gain.setTargetAtTime(.0001, now + .028, .09);
+    woodGain.gain.setValueAtTime(.0001, now + .01);
+    woodGain.gain.linearRampToValueAtTime(.05, now + .016);
+    woodGain.gain.setTargetAtTime(.0001, now + .026, .085);
 
     wood.connect(woodGain);
     woodGain.connect(context.destination);
-    wood.start(now + .012);
-    wood.stop(now + .32);
+    wood.start(now + .01);
+    wood.stop(now + .3);
 
     // Very subtle metallic sparkle.
     const sparkle = context.createOscillator();
@@ -844,22 +908,22 @@ function playImpact() {
     const sparkleFilter = context.createBiquadFilter();
 
     sparkle.type = "triangle";
-    sparkle.frequency.setValueAtTime(2450, now + .022);
-    sparkle.frequency.exponentialRampToValueAtTime(1480, now + .1);
+    sparkle.frequency.setValueAtTime(2380, now + .02);
+    sparkle.frequency.exponentialRampToValueAtTime(1420, now + .09);
 
     sparkleFilter.type = "bandpass";
-    sparkleFilter.frequency.value = 2200;
-    sparkleFilter.Q.value = 2.2;
+    sparkleFilter.frequency.value = 2150;
+    sparkleFilter.Q.value = 2.3;
 
-    sparkleGain.gain.setValueAtTime(.0001, now + .022);
-    sparkleGain.gain.linearRampToValueAtTime(.022, now + .027);
-    sparkleGain.gain.setTargetAtTime(.0001, now + .032, .07);
+    sparkleGain.gain.setValueAtTime(.0001, now + .02);
+    sparkleGain.gain.linearRampToValueAtTime(.018, now + .025);
+    sparkleGain.gain.setTargetAtTime(.0001, now + .03, .065);
 
     sparkle.connect(sparkleFilter);
     sparkleFilter.connect(sparkleGain);
     sparkleGain.connect(context.destination);
-    sparkle.start(now + .022);
-    sparkle.stop(now + .24);
+    sparkle.start(now + .02);
+    sparkle.stop(now + .22);
   };
 
   if (context.state === "running") {
@@ -870,26 +934,30 @@ function playImpact() {
 }
 
 function playWin() {
+  if (!soundEnabled) return;
+
   const context = soundContext();
 
   const start = () => {
     const now = context.currentTime;
 
-    [523.25, 659.25, 783.99].forEach((frequency, index) => {
+    // Elegant, soft ascending motif.
+    [392, 523.25, 659.25, 783.99].forEach((frequency, index) => {
       const osc = context.createOscillator();
       const gain = context.createGain();
-      const time = now + index * .08;
+      const time = now + index * .085;
 
-      osc.type = "triangle";
+      osc.type = "sine";
       osc.frequency.value = frequency;
 
       gain.gain.setValueAtTime(.0001, time);
-      gain.gain.linearRampToValueAtTime(.07, time + .015);
-      gain.gain.exponentialRampToValueAtTime(.0001, time + .5);
+      gain.gain.linearRampToValueAtTime(.055, time + .02);
+      gain.gain.setTargetAtTime(.0001, time + .05, .18);
 
-      osc.connect(gain).connect(context.destination);
+      osc.connect(gain);
+      gain.connect(context.destination);
       osc.start(time);
-      osc.stop(time + .55);
+      osc.stop(time + .75);
     });
   };
 
@@ -1088,6 +1156,18 @@ $("spin").addEventListener("click", async () => {
   message(balance < 5
     ? "Balance too low for the minimum chip."
     : "Place your bets. Rebet repeats your last round.");
+});
+
+$("sound").addEventListener("click", () => {
+  soundEnabled = !soundEnabled;
+
+  if (!soundEnabled) {
+    stopRoll();
+  }
+
+  const button = $("sound");
+  button.setAttribute("aria-pressed", String(soundEnabled));
+  button.textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
 });
 
 buildWheel();

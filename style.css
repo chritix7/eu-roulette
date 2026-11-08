@@ -728,3 +728,20 @@ footer {
   animation: none;
   pointer-events: none;
 }
+
+.sound-toggle {
+  min-width: 96px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .04);
+  color: var(--gold-light);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.sound-toggle[aria-pressed="false"] {
+  color: var(--steel);
+  border-color: rgba(255, 255, 255, .14);
+}
