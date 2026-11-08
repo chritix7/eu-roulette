@@ -716,73 +716,108 @@ function playDeflector() {
   }
 }
 
+function playApproach() {
+  const context = soundContext();
+
+  const start = () => {
+    const now = context.currentTime;
+
+    // Soft descending roll as the ball leaves the outer track.
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+
+    source.buffer = createRollNoise(context);
+    source.loop = true;
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(1100, now);
+    filter.frequency.exponentialRampToValueAtTime(360, now + .55);
+
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.linearRampToValueAtTime(.028, now + .07);
+    gain.gain.setTargetAtTime(.0001, now + .3, .16);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(context.destination);
+
+    source.start(now);
+    source.stop(now + .75);
+  };
+
+  if (context.state === "running") {
+    start();
+  } else {
+    context.resume().then(start).catch(() => {});
+  }
+}
+
 function playImpact() {
   const context = soundContext();
 
   const start = () => {
     const now = context.currentTime;
 
-    // Soft wooden pocket contact.
-    const body = context.createOscillator();
-    const bodyGain = context.createGain();
-    const bodyFilter = context.createBiquadFilter();
+    // Felt-like first contact.
+    const contact = context.createBufferSource();
+    const contactFilter = context.createBiquadFilter();
+    const contactGain = context.createGain();
 
-    body.type = "sine";
-    body.frequency.setValueAtTime(310, now);
-    body.frequency.exponentialRampToValueAtTime(180, now + .09);
+    contact.buffer = createRollNoise(context);
+    contactFilter.type = "bandpass";
+    contactFilter.frequency.value = 520;
+    contactFilter.Q.value = 1.1;
 
-    bodyFilter.type = "lowpass";
-    bodyFilter.frequency.value = 900;
+    contactGain.gain.setValueAtTime(.0001, now);
+    contactGain.gain.linearRampToValueAtTime(.07, now + .006);
+    contactGain.gain.setTargetAtTime(.0001, now + .012, .045);
 
-    bodyGain.gain.setValueAtTime(.0001, now);
-    bodyGain.gain.linearRampToValueAtTime(.09, now + .008);
-    bodyGain.gain.exponentialRampToValueAtTime(.0001, now + .16);
+    contact.connect(contactFilter);
+    contactFilter.connect(contactGain);
+    contactGain.connect(context.destination);
+    contact.start(now);
+    contact.stop(now + .22);
 
-    body.connect(bodyFilter);
-    bodyFilter.connect(bodyGain);
-    bodyGain.connect(context.destination);
-    body.start(now);
-    body.stop(now + .18);
+    // Warm wooden resonance.
+    const wood = context.createOscillator();
+    const woodGain = context.createGain();
 
-    // Subtle metallic ball contact.
-    const tick = context.createOscillator();
-    const tickGain = context.createGain();
-    const tickFilter = context.createBiquadFilter();
+    wood.type = "sine";
+    wood.frequency.setValueAtTime(238, now + .012);
+    wood.frequency.exponentialRampToValueAtTime(158, now + .16);
 
-    tick.type = "triangle";
-    tick.frequency.setValueAtTime(2350, now + .012);
-    tick.frequency.exponentialRampToValueAtTime(1250, now + .07);
+    woodGain.gain.setValueAtTime(.0001, now + .012);
+    woodGain.gain.linearRampToValueAtTime(.055, now + .018);
+    woodGain.gain.setTargetAtTime(.0001, now + .028, .09);
 
-    tickFilter.type = "bandpass";
-    tickFilter.frequency.value = 2100;
-    tickFilter.Q.value = 1.4;
+    wood.connect(woodGain);
+    woodGain.connect(context.destination);
+    wood.start(now + .012);
+    wood.stop(now + .32);
 
-    tickGain.gain.setValueAtTime(.0001, now + .012);
-    tickGain.gain.linearRampToValueAtTime(.05, now + .018);
-    tickGain.gain.exponentialRampToValueAtTime(.0001, now + .11);
+    // Very subtle metallic sparkle.
+    const sparkle = context.createOscillator();
+    const sparkleGain = context.createGain();
+    const sparkleFilter = context.createBiquadFilter();
 
-    tick.connect(tickFilter);
-    tickFilter.connect(tickGain);
-    tickGain.connect(context.destination);
-    tick.start(now + .012);
-    tick.stop(now + .13);
+    sparkle.type = "triangle";
+    sparkle.frequency.setValueAtTime(2450, now + .022);
+    sparkle.frequency.exponentialRampToValueAtTime(1480, now + .1);
 
-    // Very short settle tail.
-    const settle = context.createOscillator();
-    const settleGain = context.createGain();
+    sparkleFilter.type = "bandpass";
+    sparkleFilter.frequency.value = 2200;
+    sparkleFilter.Q.value = 2.2;
 
-    settle.type = "sine";
-    settle.frequency.setValueAtTime(145, now + .05);
-    settle.frequency.exponentialRampToValueAtTime(95, now + .22);
+    sparkleGain.gain.setValueAtTime(.0001, now + .022);
+    sparkleGain.gain.linearRampToValueAtTime(.022, now + .027);
+    sparkleGain.gain.setTargetAtTime(.0001, now + .032, .07);
 
-    settleGain.gain.setValueAtTime(.0001, now + .05);
-    settleGain.gain.linearRampToValueAtTime(.045, now + .06);
-    settleGain.gain.exponentialRampToValueAtTime(.0001, now + .28);
-
-    settle.connect(settleGain);
-    settleGain.connect(context.destination);
-    settle.start(now + .05);
-    settle.stop(now + .3);
+    sparkle.connect(sparkleFilter);
+    sparkleFilter.connect(sparkleGain);
+    sparkleGain.connect(context.destination);
+    sparkle.start(now + .022);
+    sparkle.stop(now + .24);
   };
 
   if (context.state === "running") {
@@ -844,6 +879,7 @@ function animateBall(number) {
 
     const ball = $("ball");
     let lastDeflector = -1;
+    let approachPlayed = false;
 
     if (!reduced) {
       ball.setAttribute("filter", "url(#ballMotion)");
@@ -889,13 +925,18 @@ function animateBall(number) {
         }
       }
 
-      if (!reduced && t >= .58) {
+            if (!reduced && t >= .58) {
         const deflectorIndex = Math.floor((t - .58) / .08);
 
-        if (deflectorIndex > lastDeflector && deflectorIndex < 3) {
+        if (deflectorIndex > lastDeflector && deflectorIndex < 2) {
           lastDeflector = deflectorIndex;
           playDeflector();
         }
+      }
+
+      if (!reduced && t >= .8 && !approachPlayed) {
+        approachPlayed = true;
+        playApproach();
       }
 
       if (t < 1) {
