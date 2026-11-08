@@ -461,23 +461,49 @@ function message(text) {
   $("hint").textContent = text;
 }
 
-function render() {
+function renderBets() {
   for (const [id, cell] of cells) {
     cell.querySelector(".stake")?.remove();
+    cell.classList.remove("selected");
+
     const amount = bets[id] || 0;
 
-    cell.classList.toggle("selected", amount > 0);
     cell.disabled = spinning;
     cell.setAttribute(
       "aria-label",
       `${definitions.get(id).label}. Bet: ${format(amount)}`
     );
 
-    if (amount) {
-      const stake = document.createElement("span");
-      stake.className = "stake";
-      stake.textContent = format(amount);
-      cell.appendChild(stake);
+    if (amount > 0) {
+      cell.classList.add("selected");
+
+      const stack = document.createElement("span");
+      stack.className = "stake";
+
+      // Show up to three visible chips, newest on top.
+      const values = [100, 50, 25, 10, 5];
+      let remaining = amount;
+      const visible = [];
+
+      for (const value of values) {
+        while (remaining >= value && visible.length < 3) {
+          visible.push(value);
+          remaining -= value;
+        }
+      }
+
+      if (remaining > 0 && visible.length < 3) {
+        visible.push(remaining);
+      }
+
+      visible.forEach(value => {
+        const chip = document.createElement("span");
+        chip.className = `stake-chip c${value}`;
+        chip.textContent = value;
+        stack.appendChild(chip);
+      });
+
+      cell.appendChild(stack);
     }
   }
 
@@ -496,11 +522,19 @@ function render() {
   document.querySelectorAll(".chip-choice").forEach(button => {
     button.disabled = spinning;
     button.setAttribute(
-      "aria-pressed", String(Number(button.dataset.chip) === chip)
+      "aria-pressed",
+      String(Number(button.dataset.chip) === chip)
     );
   });
 
   $("status").textContent = spinning ? "NO MORE BETS" : "BETS OPEN";
+}
+
+function updatePayoutHints() {
+  for (const [id, cell] of cells) {
+    const definition = definitions.get(id);
+    cell.title = `${definition.label} · Pays ${definition.multiplier}:1`;
+  }
 }
 
 function commit(next) {
@@ -1022,6 +1056,7 @@ $("spin").addEventListener("click", async () => {
 
   spinning = true;
   message("Ball in play.");
+  $("table").classList.add("ball-in-play");
   $("result").textContent = "Ball in play";
   render();
 
@@ -1041,6 +1076,7 @@ $("spin").addEventListener("click", async () => {
   undoStack = [];
   spinning = false;
 
+  $("table").classList.remove("ball-in-play");
   showResult(number, returned - stake);
   render();
   message(balance < 5
@@ -1051,4 +1087,5 @@ $("spin").addEventListener("click", async () => {
 buildWheel();
 buildTable();
 buildChips();
-render();
+renderBets();
+updatePayoutHints();
