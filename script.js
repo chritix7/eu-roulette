@@ -461,47 +461,50 @@ function message(text) {
   $("hint").textContent = text;
 }
 
-function renderBets() {
+function render() {
   for (const [id, cell] of cells) {
     cell.querySelector(".stake")?.remove();
-    cell.classList.remove("selected");
 
     const amount = bets[id] || 0;
+    const definition = definitions.get(id);
 
     cell.disabled = spinning;
+    cell.classList.toggle("selected", amount > 0);
+
     cell.setAttribute(
       "aria-label",
-      `${definitions.get(id).label}. Bet: ${format(amount)}`
+      `${definition.label}. Bet: ${format(amount)}`
     );
 
-    if (amount > 0) {
-      cell.classList.add("selected");
+    // Multiplier includes the returned stake.
+    cell.title =
+      `${definition.label} · Pays ${definition.multiplier - 1}:1`;
 
+    if (amount > 0) {
       const stack = document.createElement("span");
       stack.className = "stake";
+      stack.setAttribute("aria-hidden", "true");
 
-      // Show up to three visible chips, newest on top.
-      const values = [100, 50, 25, 10, 5];
-      let remaining = amount;
-      const visible = [];
+      // Decorative stack; the top always shows the exact total.
+      const layers = Math.min(3, Math.ceil(amount / 10));
 
-      for (const value of values) {
-        while (remaining >= value && visible.length < 3) {
-          visible.push(value);
-          remaining -= value;
+      const tone =
+        amount >= 100 ? "c100" :
+        amount >= 50 ? "c50" :
+        amount >= 25 ? "c25" :
+        amount >= 10 ? "c10" : "c5";
+
+      for (let i = 0; i < layers; i++) {
+        const disc = document.createElement("span");
+        disc.className = `stake-chip ${tone}`;
+        disc.style.setProperty("--layer", i);
+
+        if (i === layers - 1) {
+          disc.textContent = format(amount);
         }
-      }
 
-      if (remaining > 0 && visible.length < 3) {
-        visible.push(remaining);
+        stack.appendChild(disc);
       }
-
-      visible.forEach(value => {
-        const chip = document.createElement("span");
-        chip.className = `stake-chip c${value}`;
-        chip.textContent = value;
-        stack.appendChild(chip);
-      });
 
       cell.appendChild(stack);
     }
@@ -509,15 +512,21 @@ function renderBets() {
 
   $("balance").textContent = format(balance - total());
   $("total").textContent = format(total());
+
   $("spin").disabled = spinning || total() === 0;
   $("spin").textContent = spinning ? "SPINNING" : "SPIN";
+
   $("undo").disabled = spinning || undoStack.length === 0;
   $("clear").disabled = spinning || total() === 0;
+
   $("double").disabled =
     spinning || total() === 0 || total() * 2 > balance;
+
   $("rebet").disabled =
-    spinning || total() > 0 ||
-    total(previousBets) === 0 || total(previousBets) > balance;
+    spinning ||
+    total() > 0 ||
+    total(previousBets) === 0 ||
+    total(previousBets) > balance;
 
   document.querySelectorAll(".chip-choice").forEach(button => {
     button.disabled = spinning;
@@ -527,15 +536,14 @@ function renderBets() {
     );
   });
 
-  $("status").textContent = spinning ? "NO MORE BETS" : "BETS OPEN";
+  $("status").textContent =
+    spinning ? "NO MORE BETS" : "BETS OPEN";
+
+  // Appearance only: interaction is controlled by disabled + spinning.
+  $("table").classList.toggle("no-more-bets", spinning);
 }
 
-function updatePayoutHints() {
-  for (const [id, cell] of cells) {
-    const definition = definitions.get(id);
-    cell.title = `${definition.label} · Pays ${definition.multiplier}:1`;
-  }
-}
+
 
 function commit(next) {
   if (spinning) return;
@@ -1056,7 +1064,6 @@ $("spin").addEventListener("click", async () => {
 
   spinning = true;
   message("Ball in play.");
-  $("table").classList.add("ball-in-play");
   $("result").textContent = "Ball in play";
   render();
 
@@ -1076,7 +1083,6 @@ $("spin").addEventListener("click", async () => {
   undoStack = [];
   spinning = false;
 
-  $("table").classList.remove("ball-in-play");
   showResult(number, returned - stake);
   render();
   message(balance < 5
@@ -1087,5 +1093,4 @@ $("spin").addEventListener("click", async () => {
 buildWheel();
 buildTable();
 buildChips();
-renderBets();
-updatePayoutHints();
+render();
