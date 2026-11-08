@@ -25,6 +25,13 @@ let spinning = false;
 let ballAngle = 0;
 let ballRadius = 258;
 let lastNumber = null;
+let spins = 0;
+let bestWin = 0;
+let netResult = 0;
+let redCount = 0;
+let blackCount = 0;
+let streakColor = null;
+let streakCount = 0;
 const results = [];
 
 const definitions = new Map();
@@ -556,6 +563,7 @@ function commit(next) {
   undoStack.push(clone(bets));
   bets = next;
   render();
+  saveSession();
   message("Bets accepted.");
 }
 
@@ -1098,6 +1106,8 @@ function showResult(number, net) {
     net === 0 ? "BREAK EVEN" : `NET LOSS ${format(-net)}`
   }`;
 
+  updateStats(net);
+
   $("net").textContent = `${net > 0 ? "+" : ""}${format(net)}`;
 
   for (const [id, cell] of cells) {
@@ -1121,6 +1131,80 @@ function showResult(number, net) {
   });
 
   lastNumber = number;
+}
+
+function saveSession() {
+  localStorage.setItem("chrysion", JSON.stringify({
+    balance,
+    history,
+    spins,
+    bestWin,
+    netResult,
+    redCount,
+    blackCount,
+    streakColor,
+    streakCount
+  }));
+}
+
+function loadSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("chrysion"));
+
+    if (!saved) return;
+
+    balance = Number(saved.balance) || 1000;
+    history.push(...(saved.history || []));
+    spins = Number(saved.spins) || 0;
+    bestWin = Number(saved.bestWin) || 0;
+    netResult = Number(saved.netResult) || 0;
+    redCount = Number(saved.redCount) || 0;
+    blackCount = Number(saved.blackCount) || 0;
+    streakColor = saved.streakColor || null;
+    streakCount = Number(saved.streakCount) || 0;
+  } catch (error) {
+    // Ignore corrupted saved data.
+  }
+}
+
+function updateStats(net) {
+  spins += 1;
+  netResult += net;
+
+  if (net > bestWin) {
+    bestWin = net;
+  }
+
+  const currentColor = color(lastNumber);
+
+  if (currentColor === "red") {
+    redCount += 1;
+  } else if (currentColor === "black") {
+    blackCount += 1;
+  }
+
+  if (currentColor === streakColor) {
+    streakCount += 1;
+  } else {
+    streakColor = currentColor;
+    streakCount = 1;
+  }
+
+  $("stat-spins").textContent = format(spins);
+  $("stat-best").textContent = format(bestWin);
+  $("stat-net").textContent = format(netResult);
+  $("stat-colors").textContent = `${redCount} / ${blackCount}`;
+
+  const streakName = {
+    red: "Red",
+    black: "Black",
+    green: "Zero"
+  }[streakColor];
+
+  $("stat-streak").textContent =
+    `${streakName} × ${streakCount}`;
+
+  saveSession();
 }
 
 $("spin").addEventListener("click", async () => {
@@ -1170,6 +1254,30 @@ $("sound").addEventListener("click", () => {
   button.textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
 });
 
+document.addEventListener("keydown", event => {
+  if (event.target.tagName === "INPUT" || event.target.tagName === "SELECT") {
+    return;
+  }
+
+  if (event.code === "Space") {
+    event.preventDefault();
+    $("spin").click();
+  }
+
+  if (event.key.toLowerCase() === "u") {
+    $("undo").click();
+  }
+
+  if (event.key.toLowerCase() === "c") {
+    $("clear").click();
+  }
+
+  if (event.key.toLowerCase() === "r") {
+    $("rebet").click();
+  }
+});
+
+loadSession();
 buildWheel();
 buildTable();
 buildChips();

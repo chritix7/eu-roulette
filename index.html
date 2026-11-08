@@ -11,20 +11,26 @@
 <body>
   <div class="app">
     <header class="topbar">
-      <div class="brand">
-        <div class="monogram" aria-hidden="true">C</div>
-        <div>
-          <h1>CHRYSION <span>ROYALE</span></h1>
-          <p>EUROPEAN ROULETTE</p>
-        </div>
-      </div>
+  <div class="brand">
+    <div class="monogram" aria-hidden="true">C</div>
+    <div>
+      <h1>CHRYSION <span>ROYALE</span></h1>
+      <p>EUROPEAN ROULETTE · PRIVATE TABLE</p>
+    </div>
+  </div>
 
-      <div class="wallet">
-        <span class="eyebrow">AVAILABLE</span>
-        <strong id="balance">1,000</strong>
-        <span class="unit">VIRTUAL CHIPS</span>
-      </div>
-    </header>
+  <div class="header-right">
+    <div class="wallet">
+      <span class="eyebrow">AVAILABLE</span>
+      <strong id="balance">1,000</strong>
+      <span class="unit">VIRTUAL CHIPS</span>
+    </div>
+
+    <button id="sound" class="sound-toggle" type="button" aria-pressed="true">
+      SOUND ON
+    </button>
+  </div>
+</header>
 
     <button id="sound" class="sound-toggle" type="button" aria-pressed="true">
       SOUND ON
@@ -57,6 +63,40 @@
           <div id="history" class="history"></div>
         </div>
       </section>
+
+      <aside class="stats-panel" aria-label="Session statistics">
+  <div class="section-heading">
+    <h2>Session</h2>
+    <span class="eyebrow">LIVE</span>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat">
+      <span class="eyebrow">SPINS</span>
+      <strong id="stat-spins">0</strong>
+    </div>
+
+    <div class="stat">
+      <span class="eyebrow">BEST WIN</span>
+      <strong id="stat-best">0</strong>
+    </div>
+
+    <div class="stat">
+      <span class="eyebrow">NET</span>
+      <strong id="stat-net">0</strong>
+    </div>
+
+    <div class="stat">
+      <span class="eyebrow">RED / BLACK</span>
+      <strong id="stat-colors">0 / 0</strong>
+    </div>
+  </div>
+
+  <div class="stats-note">
+    <span class="eyebrow">CURRENT STREAK</span>
+    <p id="stat-streak">—</p>
+  </div>
+</aside>
 
       <section class="panel betting-panel" aria-label="Betting table">
         <div class="section-heading">
